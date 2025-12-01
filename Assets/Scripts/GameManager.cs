@@ -15,6 +15,9 @@ public class GameManager : MonoBehaviour
     public int totalPuzzles = 9;
     private int collectedPuzzles = 0;
     
+    // 跟踪已收集的拼图ID（用于检查特定拼图是否已收集）
+    private HashSet<int> collectedPuzzleIds = new HashSet<int>();
+    
     [Header("UI引用（旧版兼容）")]
     public Text puzzleCountText;
     public GameObject victoryPanel;
@@ -55,6 +58,15 @@ public class GameManager : MonoBehaviour
     // 收集拼图的方法
     public void CollectPuzzle(int puzzleId)
     {
+        // 如果这个拼图已经收集过，不重复计算
+        if (collectedPuzzleIds.Contains(puzzleId))
+        {
+            Debug.LogWarning($"拼图 {puzzleId} 已经被收集过了！");
+            return;
+        }
+        
+        // 添加到已收集列表
+        collectedPuzzleIds.Add(puzzleId);
         collectedPuzzles++;
         Debug.Log($"收集拼图 {puzzleId}！进度：{collectedPuzzles}/{totalPuzzles}");
         
@@ -140,6 +152,7 @@ public class GameManager : MonoBehaviour
     public void ResetProgress()
     {
         collectedPuzzles = 0;
+        collectedPuzzleIds.Clear();
         UpdatePuzzleUI();
         Time.timeScale = 1f;
     }
@@ -239,5 +252,46 @@ public class GameManager : MonoBehaviour
                 Application.Quit();
             #endif
         }
+    }
+    
+    // ========== 拼图状态查询接口 ==========
+    
+    /// <summary>
+    /// 检查指定ID的拼图是否已收集
+    /// </summary>
+    /// <param name="puzzleId">拼图ID</param>
+    /// <returns>如果已收集返回true，否则返回false</returns>
+    public bool IsPuzzleCollected(int puzzleId)
+    {
+        return collectedPuzzleIds.Contains(puzzleId);
+    }
+    
+    /// <summary>
+    /// 获取总拼图数量（属性）
+    /// </summary>
+    public int TotalPuzzles
+    {
+        get { return totalPuzzles; }
+    }
+    
+    /// <summary>
+    /// 获取已收集的拼图数量（用于诊断脚本）
+    /// </summary>
+    /// <returns>已收集的拼图数量</returns>
+    public int GetCollectedPuzzlesCount()
+    {
+        return collectedPuzzles;
+    }
+    
+    // ========== 游戏事件接口 ==========
+    
+    /// <summary>
+    /// 玩家被守卫发现时调用（由GuardAI脚本调用）
+    /// </summary>
+    public void PlayerDetectedByGuard()
+    {
+        Debug.Log("玩家被守卫发现了！");
+        // 可以在这里添加被发现的处理逻辑
+        // 例如：触发警报、减少生命值、记录被发现次数等
     }
 }
