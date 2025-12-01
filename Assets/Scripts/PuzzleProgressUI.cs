@@ -3,171 +3,126 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// 拼图收集进度UI - 管理进度条的显示和动画
+/// </summary>
 public class PuzzleProgressUI : MonoBehaviour
 {
-    [Header("UI引用")]
-    public Text progressText;           // 进度文本（如：3/9）
-    public Image progressBar;           // 进度条
-    public Text puzzleHintText;         // 提示文本
-    public GameObject puzzleIconPrefab; // 拼图图标预制体
-    public Transform iconsContainer;    // 图标容器
+    [Header("UI组件")]
+    public GameObject progressText; // 支持Text和TextMeshPro
+    public Image progressFillImage;
+    public Image progressBackgroundImage;
     
-    [Header("视觉设置")]
-    public Color collectedColor = Color.green;
-    public Color missingColor = Color.gray;
-    public float iconSpacing = 50f;
+    [Header("动画设置")]
+    public float fillAnimationSpeed = 2f;
+    public bool animateProgress = true;
     
-    private List<Image> puzzleIcons = new List<Image>();
+    [Header("颜色设置")]
+    public Color emptyColor = new Color(0.3f, 0.3f, 0.3f, 1f);
+    public Color fullColor = new Color(0.2f, 0.8f, 0.2f, 1f);
+    public Gradient progressGradient;
+    
+    private float targetFillAmount = 0f;
+    private int currentCollected = 0;
+    private int currentTotal = 0;
     
     void Start()
     {
-        InitializeUI();
-        UpdateUI();
-        
-        // 订阅事件
-        GameManager.OnPuzzleCollected += OnPuzzleCollected;
-        GameManager.OnGameStateChanged += OnGameStateChanged;
-    }
-    
-    void OnDestroy()
-    {
-        // 取消订阅
-        GameManager.OnPuzzleCollected -= OnPuzzleCollected;
-        GameManager.OnGameStateChanged -= OnGameStateChanged;
-    }
-    
-    void InitializeUI()
-    {
-        if (iconsContainer != null && puzzleIconPrefab != null)
+        // 初始化进度条
+        if (progressFillImage != null)
         {
-            // 清除现有图标
-            foreach (Transform child in iconsContainer)
+            progressFillImage.fillAmount = 0f;
+        }
+        
+        UpdateProgress(0, GameManager.Instance != null ? GameManager.Instance.totalPuzzles : 9);
+    }
+    
+    void Update()
+    {
+        // 平滑动画填充进度条
+        if (animateProgress && progressFillImage != null)
+        {
+            float currentFill = progressFillImage.fillAmount;
+            if (Mathf.Abs(currentFill - targetFillAmount) > 0.01f)
             {
-                Destroy(child.gameObject);
+                progressFillImage.fillAmount = Mathf.Lerp(currentFill, targetFillAmount, 
+                    fillAnimationSpeed * Time.deltaTime);
+                UpdateProgressColor();
             }
-            puzzleIcons.Clear();
-            
-            // 创建新的图标
-            for (int i = 0; i < GameManager.Instance.TotalPuzzles; i++)
+            else
             {
-                GameObject icon = Instantiate(puzzleIconPrefab, iconsContainer);
-                
-                // 计算位置
-                RectTransform rect = icon.GetComponent<RectTransform>();
-                rect.anchoredPosition = new Vector2(i * iconSpacing, 0);
-                
-                // 存储引用
-                Image iconImage = icon.GetComponent<Image>();
-                if (iconImage != null)
+                progressFillImage.fillAmount = targetFillAmount;
+            }
+        }
+    }
+    
+    public void UpdateProgress(int collected, int total)
+    {
+        currentCollected = collected;
+        currentTotal = total;
+        
+        if (total > 0)
+        {
+            targetFillAmount = (float)collected / total;
+        }
+        else
+        {
+            targetFillAmount = 0f;
+        }
+        
+        // 如果不使用动画，直接设置
+        if (!animateProgress && progressFillImage != null)
+        {
+            progressFillImage.fillAmount = targetFillAmount;
+            UpdateProgressColor();
+        }
+        
+        // 更新文本（支持Text和TextMeshPro）
+        if (progressText != null)
+        {
+            string textContent = $"拼图收集: {collected}/{total}";
+            
+            // 尝试使用TextMeshPro（新版本）
+            TMPro.TextMeshProUGUI tmpText = progressText.GetComponent<TMPro.TextMeshProUGUI>();
+            if (tmpText != null)
+            {
+                tmpText.text = textContent;
+            }
+            else
+            {
+                // 尝试使用传统Text组件
+                Text textComponent = progressText.GetComponent<Text>();
+                if (textComponent != null)
                 {
-                    puzzleIcons.Add(iconImage);
+                    textComponent.text = textContent;
                 }
             }
         }
     }
     
-    void UpdateUI()
+    void UpdateProgressColor()
     {
-        if (GameManager.Instance == null) return;
+        if (progressFillImage == null) return;
         
-        int collected = GameManager.Instance.GetCollectedPuzzlesCount();
-        int total = GameManager.Instance.TotalPuzzles;
-        float progress = GameManager.Instance.GetProgressPercentage();
-        
-        // 更新文本
-        if (progressText != null)
+        // 使用渐变色
+        if (progressGradient != null && progressGradient.colorKeys.Length > 0)
         {
-            progressText.text = $"拼图: {collected}/{total}";
+            progressFillImage.color = progressGradient.Evaluate(targetFillAmount);
         }
-        
-        // 更新进度条
-        if (progressBar != null)
+        else
         {
-            progressBar.fillAmount = progress;
-            progressBar.color = Color.Lerp(Color.red, Color.green, progress);
-        }
-        
-        // 更新图标
-        UpdatePuzzleIcons();
-        
-        // 更新提示
-        UpdateHintText(collected, total);
-    }
-    
-    void UpdatePuzzleIcons()
-    {
-        for (int i = 0; i < puzzleIcons.Count; i++)
-        {
-            if (i < GameManager.Instance.TotalPuzzles)
-            {
-                bool isCollected = GameManager.Instance.IsPuzzleCollected(i + 1);
-                puzzleIcons[i].color = isCollected ? collectedColor : missingColor;
-            }
+            // 使用简单插值
+            progressFillImage.color = Color.Lerp(emptyColor, fullColor, targetFillAmount);
         }
     }
     
-    void UpdateHintText(int collected, int total)
+    // 从GameManager同步更新
+    public void SyncWithGameManager()
     {
-        if (puzzleHintText != null)
+        if (GameManager.Instance != null)
         {
-            if (collected == 0)
-            {
-                puzzleHintText.text = "寻找散落的拼图碎片";
-            }
-            else if (collected < total / 2)
-            {
-                puzzleHintText.text = $"继续寻找，还差{total - collected}个拼图";
-            }
-            else if (collected < total)
-            {
-                puzzleHintText.text = $"快完成了，只差{total - collected}个拼图！";
-            }
-            else
-            {
-                puzzleHintText.text = "已收集所有拼图！";
-            }
-        }
-    }
-    
-    // 事件处理
-    void OnPuzzleCollected(int puzzleId)
-    {
-        UpdateUI();
-        
-        // 显示收集动画
-        ShowCollectAnimation(puzzleId);
-    }
-    
-    void OnGameStateChanged(GameManager.GameState newState)
-    {
-        if (newState == GameManager.GameState.Playing)
-        {
-            UpdateUI();
-        }
-    }
-    
-    void ShowCollectAnimation(int puzzleId)
-    {
-        // 这里可以添加收集时的UI动画
-        // 比如让对应的拼图图标闪烁
-        StartCoroutine(FlashIcon(puzzleId - 1));
-    }
-    
-    IEnumerator FlashIcon(int iconIndex)
-    {
-        if (iconIndex >= 0 && iconIndex < puzzleIcons.Count)
-        {
-            Image icon = puzzleIcons[iconIndex];
-            Color originalColor = icon.color;
-            
-            // 闪烁效果
-            for (int i = 0; i < 3; i++)
-            {
-                icon.color = Color.yellow;
-                yield return new WaitForSeconds(0.1f);
-                icon.color = collectedColor;
-                yield return new WaitForSeconds(0.1f);
-            }
+            UpdateProgress(GameManager.Instance.GetCollectedPuzzles(), 
+                          GameManager.Instance.totalPuzzles);
         }
     }
 }
