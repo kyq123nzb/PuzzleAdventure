@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using System;
+using System.Linq;
 
 public class GameManager : MonoBehaviour
 {
@@ -13,46 +14,62 @@ public class GameManager : MonoBehaviour
     // ========== 游戏状态枚举 ==========
     public enum GameState
     {
-        MainMenu,       // 主菜单
-        Loading,        // 加载中
-        Playing,        // 游戏中
-        Paused,         // 暂停
-        PuzzleSolving,  // 解谜中（特殊状态）
-        Victory,        // 胜利
-        GameOver,       // 游戏结束（被守卫发现）
-        Cutscene        // 过场动画
+        MainMenu,
+        Loading,
+        Playing,
+        Paused,
+        PuzzleSolving,
+        Victory,
+        GameOver,
+        Cutscene
     }
     
     // ========== 事件系统 ==========
     public static event Action<GameState> OnGameStateChanged;
     public static event Action<int> OnPuzzleCollected;
     public static event Action<float> OnTimeUpdated;
-    public static event Action<bool> OnPlayerDetected; // 玩家被守卫发现
+    public static event Action<bool> OnPlayerDetected;
+    public static event Action<int> OnPlayerLivesChanged;
     
     // ========== 游戏数据 ==========
     [Header("游戏基础设置")]
-    public int totalPuzzles = 9;
-    public float maxGameTime = 600f; // 10分钟限制
+    [SerializeField] private int totalPuzzles = 9;
+    [SerializeField] private float maxGameTime = 600f;
+    [SerializeField] private int initialPlayerLives = 3;
     
     [Header("谜题设置")]
-    public string correctRuneSequence = "123"; // 符文正确顺序
-    public string correctTorchSequence = "ABCD"; // 火把正确顺序
+    [SerializeField] private string correctRuneSequence = "123";
+    [SerializeField] private string correctTorchSequence = "ABCD";
+    
+    [Header("UI引用")]
+    [SerializeField] private GameObject pauseMenuUI;
+    [SerializeField] private GameObject gameOverUI;
+    [SerializeField] private GameObject victoryUI;
     
     private int collectedPuzzles = 0;
     private GameState currentState = GameState.MainMenu;
     private float gameTime = 0f;
     private bool isTiming = false;
-    private int playerLives = 3; // 玩家生命值
+    private int playerLives = 3;
     
     // ========== 游戏进度数据 ==========
     private Dictionary<int, bool> puzzleCollectionStatus = new Dictionary<int, bool>();
     private string currentRuneInput = "";
     private string currentTorchInput = "";
     private bool isBossDefeated = false;
+    private bool[] runeSequenceCheck;
+    private bool[] torchSequenceCheck;
     
     // ========== 持久化数据 ==========
     private float bestTime = float.MaxValue;
     private int gamesPlayed = 0;
+    private const string BEST_TIME_KEY = "BestTime";
+    private const string GAMES_PLAYED_KEY = "GamesPlayed";
+    
+    // ========== 属性访问器 ==========
+    public int TotalPuzzles => totalPuzzles;
+    public float MaxGameTime => maxGameTime;
+    public int PlayerLives => playerLives;
     
     void Awake()
     {
@@ -61,18 +78,23 @@ public class GameManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            InitializeGameData();
+            Debug.Log("GameManager Awake: 实例已创建");
         }
         else
         {
+            Debug.LogWarning("GameManager Awake: 已存在实例，销毁新实例");
             Destroy(gameObject);
+            return;
         }
     }
     
     void Start()
     {
         LoadPlayerPrefs();
+        InitializeGameData(); // 移到这里，确保在Start中初始化
         SetGameState(GameState.MainMenu);
+        InitializeUIReferences();
+        Debug.Log($"GameManager Start: 初始化完成，总拼图数: {totalPuzzles}");
     }
     
     void Update()
@@ -83,43 +105,63 @@ public class GameManager : MonoBehaviour
             gameTime += Time.deltaTime;
             OnTimeUpdated?.Invoke(gameTime);
             
-            // 检查时间限制
             if (gameTime >= maxGameTime)
             {
                 GameOver("时间耗尽！");
             }
         }
         
-        // 全局输入检测
         HandleGlobalInput();
     }
     
     // ========== 初始化方法 ==========
     void InitializeGameData()
     {
+        // 确保字典为空再初始化
+        puzzleCollectionStatus.Clear();
+        
         // 初始化拼图收集状态
         for (int i = 1; i <= totalPuzzles; i++)
         {
             puzzleCollectionStatus[i] = false;
+            Debug.Log($"初始化拼图 {i}: 状态为未收集");
         }
+        
+        // 初始化序列检查数组
+        runeSequenceCheck = new bool[correctRuneSequence.Length];
+        torchSequenceCheck = new bool[correctTorchSequence.Length];
+        
+        Debug.Log($"游戏数据初始化完成，共 {totalPuzzles} 个拼图");
+    }
+    
+    void InitializeUIReferences()
+    {
+        if (pauseMenuUI == null)
+            pauseMenuUI = GameObject.Find("PauseMenu");
+        if (gameOverUI == null)
+            gameOverUI = GameObject.Find("GameOverUI");
+        if (victoryUI == null)
+            victoryUI = GameObject.Find("VictoryUI");
     }
     
     void LoadPlayerPrefs()
     {
-        bestTime = PlayerPrefs.GetFloat("BestTime", float.MaxValue);
-        gamesPlayed = PlayerPrefs.GetInt("GamesPlayed", 0);
+        bestTime = PlayerPrefs.GetFloat(BEST_TIME_KEY, float.MaxValue);
+        gamesPlayed = PlayerPrefs.GetInt(GAMES_PLAYED_KEY, 0);
     }
     
     void SavePlayerPrefs()
     {
-        PlayerPrefs.SetFloat("BestTime", bestTime);
-        PlayerPrefs.SetInt("GamesPlayed", gamesPlayed);
+        PlayerPrefs.SetFloat(BEST_TIME_KEY, bestTime);
+        PlayerPrefs.SetInt(GAMES_PLAYED_KEY, gamesPlayed);
         PlayerPrefs.Save();
     }
     
     // ========== 游戏状态控制 ==========
     public void SetGameState(GameState newState)
     {
+        if (currentState == newState) return;
+        
         GameState previousState = currentState;
         currentState = newState;
         
@@ -128,44 +170,65 @@ public class GameManager : MonoBehaviour
             case GameState.MainMenu:
                 Time.timeScale = 1f;
                 ResetGameData();
+                UpdateUIVisibility();
                 break;
                 
             case GameState.Loading:
                 Time.timeScale = 1f;
+                UpdateUIVisibility();
                 break;
                 
             case GameState.Playing:
                 Time.timeScale = 1f;
                 StartGameTimer();
+                UpdateUIVisibility();
                 break;
                 
             case GameState.Paused:
                 Time.timeScale = 0f;
                 StopGameTimer();
+                UpdateUIVisibility();
                 break;
                 
             case GameState.PuzzleSolving:
-                Time.timeScale = 1f; // 解谜时游戏继续，但玩家控制可能被限制
+                Time.timeScale = 1f;
+                UpdateUIVisibility();
                 break;
                 
             case GameState.Victory:
                 Time.timeScale = 0f;
                 StopGameTimer();
                 SaveBestTime();
+                UpdateUIVisibility();
                 break;
                 
             case GameState.GameOver:
                 Time.timeScale = 0f;
                 StopGameTimer();
+                UpdateUIVisibility();
                 break;
                 
             case GameState.Cutscene:
-                Time.timeScale = 1f; // 过场动画时游戏继续
+                Time.timeScale = 1f;
+                UpdateUIVisibility();
                 break;
         }
         
         OnGameStateChanged?.Invoke(currentState);
-        Debug.Log($"游戏状态: {previousState} -> {currentState}");
+        Debug.Log($"游戏状态: {previousState} -> {currentState} | 时间: {FormatTime(gameTime)}");
+    }
+    
+    // ========== UI管理 ==========
+    void UpdateUIVisibility()
+    {
+        if (pauseMenuUI != null)
+            pauseMenuUI.SetActive(currentState == GameState.Paused);
+        
+        if (gameOverUI != null)
+            gameOverUI.SetActive(currentState == GameState.GameOver);
+        
+        if (victoryUI != null)
+            victoryUI.SetActive(currentState == GameState.Victory);
     }
     
     // ========== 公共接口 - 游戏流程控制 ==========
@@ -174,28 +237,21 @@ public class GameManager : MonoBehaviour
         gamesPlayed++;
         ResetGameData();
         SetGameState(GameState.Loading);
-        // 实际场景加载在加载完成后会调用OnSceneLoaded
+        SceneManager.LoadScene("GameScene");
     }
     
-    public void ContinueGame()
-    {
-        SetGameState(GameState.Playing);
-    }
+    public void ContinueGame() => SetGameState(GameState.Playing);
     
     public void PauseGame()
     {
         if (currentState == GameState.Playing || currentState == GameState.PuzzleSolving)
-        {
             SetGameState(GameState.Paused);
-        }
     }
     
     public void ResumeGame()
     {
         if (currentState == GameState.Paused)
-        {
             SetGameState(GameState.Playing);
-        }
     }
     
     public void ReturnToMainMenu()
@@ -206,7 +262,9 @@ public class GameManager : MonoBehaviour
     
     public void RestartGame()
     {
+        ResetGameData();
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        SetGameState(GameState.Playing);
     }
     
     public void QuitGame()
@@ -223,21 +281,44 @@ public class GameManager : MonoBehaviour
     // ========== 公共接口 - 拼图收集系统 ==========
     public void CollectPuzzle(int puzzleId)
     {
-        if (currentState != GameState.Playing) return;
-        
-        if (puzzleId >= 1 && puzzleId <= totalPuzzles && !puzzleCollectionStatus[puzzleId])
+        if (currentState != GameState.Playing)
         {
-            puzzleCollectionStatus[puzzleId] = true;
-            collectedPuzzles++;
-            
-            OnPuzzleCollected?.Invoke(puzzleId);
-            Debug.Log($"收集拼图 {puzzleId}！进度：{collectedPuzzles}/{totalPuzzles}");
-            
-            // 检查胜利条件
-            if (collectedPuzzles >= totalPuzzles && isBossDefeated)
+            Debug.LogWarning($"无法收集拼图 {puzzleId}: 游戏状态为 {currentState}，非Playing状态");
+            return;
+        }
+        
+        // 添加详细的调试信息
+        Debug.Log($"尝试收集拼图 ID: {puzzleId}");
+        Debug.Log($"ID范围检查: {puzzleId >= 1 && puzzleId <= totalPuzzles}");
+        Debug.Log($"是否已收集: {puzzleCollectionStatus.ContainsKey(puzzleId) && puzzleCollectionStatus[puzzleId]}");
+        
+        if (puzzleId >= 1 && puzzleId <= totalPuzzles)
+        {
+            if (!puzzleCollectionStatus.ContainsKey(puzzleId))
             {
-                Victory();
+                Debug.LogError($"拼图ID {puzzleId} 不存在于字典中！重新初始化字典...");
+                puzzleCollectionStatus[puzzleId] = false;
             }
+            
+            if (!puzzleCollectionStatus[puzzleId])
+            {
+                puzzleCollectionStatus[puzzleId] = true;
+                collectedPuzzles++;
+                
+                OnPuzzleCollected?.Invoke(puzzleId);
+                Debug.Log($"✓ 成功收集拼图 {puzzleId}！进度：{collectedPuzzles}/{totalPuzzles}");
+                
+                // 检查胜利条件
+                CheckVictoryCondition();
+            }
+            else
+            {
+                Debug.LogWarning($"拼图 {puzzleId} 已经收集过了");
+            }
+        }
+        else
+        {
+            Debug.LogError($"拼图ID {puzzleId} 超出有效范围 (1-{totalPuzzles})");
         }
     }
     
@@ -253,6 +334,12 @@ public class GameManager : MonoBehaviour
         
         currentRuneInput += runeId;
         Debug.Log($"符文输入: {currentRuneInput}");
+        
+        int index = currentRuneInput.Length - 1;
+        if (index < runeSequenceCheck.Length)
+        {
+            runeSequenceCheck[index] = (currentRuneInput[index] == correctRuneSequence[index]);
+        }
         
         if (currentRuneInput.Length >= correctRuneSequence.Length)
         {
@@ -274,6 +361,12 @@ public class GameManager : MonoBehaviour
         currentTorchInput += torchId;
         Debug.Log($"火把输入: {currentTorchInput}");
         
+        int index = currentTorchInput.Length - 1;
+        if (index < torchSequenceCheck.Length)
+        {
+            torchSequenceCheck[index] = (currentTorchInput[index] == correctTorchSequence[index]);
+        }
+        
         if (currentTorchInput.Length >= correctTorchSequence.Length)
         {
             if (currentTorchInput == correctTorchSequence)
@@ -290,20 +383,26 @@ public class GameManager : MonoBehaviour
     public void StartRunePuzzle()
     {
         currentRuneInput = "";
+        Array.Clear(runeSequenceCheck, 0, runeSequenceCheck.Length);
         SetGameState(GameState.PuzzleSolving);
     }
     
     public void StartTorchPuzzle()
     {
         currentTorchInput = "";
+        Array.Clear(torchSequenceCheck, 0, torchSequenceCheck.Length);
         SetGameState(GameState.PuzzleSolving);
     }
+    
+    public bool[] GetRuneSequenceStatus() => runeSequenceCheck;
+    public bool[] GetTorchSequenceStatus() => torchSequenceCheck;
     
     // ========== 公共接口 - 战斗系统 ==========
     public void PlayerDetectedByGuard()
     {
         playerLives--;
         OnPlayerDetected?.Invoke(true);
+        OnPlayerLivesChanged?.Invoke(playerLives);
         
         if (playerLives <= 0)
         {
@@ -312,7 +411,6 @@ public class GameManager : MonoBehaviour
         else
         {
             Debug.Log($"被守卫发现！剩余生命: {playerLives}");
-            // 这里可以触发重置玩家位置等逻辑
         }
     }
     
@@ -320,60 +418,63 @@ public class GameManager : MonoBehaviour
     {
         isBossDefeated = true;
         Debug.Log("Boss被击败！");
-        
-        // 检查胜利条件
+        CheckVictoryCondition();
+    }
+    
+    public void AddPlayerLife(int amount = 1)
+    {
+        playerLives += amount;
+        OnPlayerLivesChanged?.Invoke(playerLives);
+        Debug.Log($"增加 {amount} 点生命，当前生命: {playerLives}");
+    }
+    
+    // ========== 公共接口 - 数据查询 ==========
+    public int GetCollectedPuzzlesCount() => collectedPuzzles;
+    public float GetGameTime() => gameTime;
+    public int GetPlayerLives() => playerLives;
+    
+    public float GetProgressPercentage()
+    {
+        return totalPuzzles > 0 ? (float)collectedPuzzles / totalPuzzles : 0f;
+    }
+    
+    public GameState GetCurrentGameState() => currentState;
+    public float GetBestTime() => bestTime;
+    public int GetGamesPlayed() => gamesPlayed;
+    
+    // ========== 检查胜利条件 ==========
+    void CheckVictoryCondition()
+    {
         if (collectedPuzzles >= totalPuzzles && isBossDefeated)
         {
             Victory();
         }
-    }
-    
-    // ========== 公共接口 - 数据查询 ==========
-    public int GetCollectedPuzzlesCount()
-    {
-        return collectedPuzzles;
-    }
-    
-    public float GetGameTime()
-    {
-        return gameTime;
-    }
-    
-    public int GetPlayerLives()
-    {
-        return playerLives;
-    }
-    
-    public float GetProgressPercentage()
-    {
-        return (float)collectedPuzzles / totalPuzzles;
-    }
-    
-    public GameState GetCurrentGameState()
-    {
-        return currentState;
-    }
-    
-    public float GetBestTime()
-    {
-        return bestTime;
+        else if (collectedPuzzles >= totalPuzzles)
+        {
+            Debug.Log("所有拼图已收集，但还需击败Boss！");
+        }
+        else if (isBossDefeated)
+        {
+            Debug.Log("Boss已击败，但还需收集所有拼图！");
+        }
     }
     
     // ========== 私有方法 ==========
     void HandleGlobalInput()
     {
-        // ESC键暂停/恢复游戏
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (currentState == GameState.Playing || currentState == GameState.PuzzleSolving)
-            {
                 PauseGame();
-            }
             else if (currentState == GameState.Paused)
-            {
                 ResumeGame();
-            }
         }
+        
+        #if UNITY_EDITOR
+        if (Input.GetKeyDown(KeyCode.V)) Victory();
+        if (Input.GetKeyDown(KeyCode.G)) GameOver("测试游戏结束");
+        if (Input.GetKeyDown(KeyCode.P)) CollectPuzzle(1);
+        #endif
     }
     
     void StartGameTimer()
@@ -382,25 +483,31 @@ public class GameManager : MonoBehaviour
         gameTime = 0f;
     }
     
-    void StopGameTimer()
-    {
-        isTiming = false;
-    }
+    void StopGameTimer() => isTiming = false;
     
     void ResetGameData()
     {
         collectedPuzzles = 0;
         gameTime = 0f;
-        playerLives = 3;
+        playerLives = initialPlayerLives;
         isBossDefeated = false;
         currentRuneInput = "";
         currentTorchInput = "";
         
         // 重置拼图收集状态
-        foreach (int key in new List<int>(puzzleCollectionStatus.Keys))
+        puzzleCollectionStatus.Clear();
+        for (int i = 1; i <= totalPuzzles; i++)
         {
-            puzzleCollectionStatus[key] = false;
+            puzzleCollectionStatus[i] = false;
         }
+        
+        // 重置序列检查
+        if (runeSequenceCheck != null)
+            Array.Clear(runeSequenceCheck, 0, runeSequenceCheck.Length);
+        if (torchSequenceCheck != null)
+            Array.Clear(torchSequenceCheck, 0, torchSequenceCheck.Length);
+        
+        Debug.Log("游戏数据已重置");
     }
     
     void SaveBestTime()
@@ -408,7 +515,7 @@ public class GameManager : MonoBehaviour
         if (gameTime < bestTime)
         {
             bestTime = gameTime;
-            PlayerPrefs.SetFloat("BestTime", bestTime);
+            PlayerPrefs.SetFloat(BEST_TIME_KEY, bestTime);
             PlayerPrefs.Save();
             Debug.Log($"新纪录！最佳时间: {FormatTime(bestTime)}");
         }
@@ -417,48 +524,46 @@ public class GameManager : MonoBehaviour
     void Victory()
     {
         SetGameState(GameState.Victory);
-        Debug.Log("游戏胜利！");
+        Debug.Log($"游戏胜利！用时: {FormatTime(gameTime)}");
     }
     
     void GameOver(string reason)
     {
         SetGameState(GameState.GameOver);
-        Debug.Log($"游戏结束: {reason}");
+        Debug.Log($"游戏结束: {reason} | 用时: {FormatTime(gameTime)}");
     }
     
     void RunePuzzleSolved()
     {
         Debug.Log("符文谜题解决！");
         SetGameState(GameState.Playing);
-        // 这里可以触发开门等逻辑
     }
     
     void RunePuzzleFailed()
     {
         Debug.Log("符文谜题失败！");
         currentRuneInput = "";
-        // 这里可以触发惩罚机制
+        Array.Clear(runeSequenceCheck, 0, runeSequenceCheck.Length);
     }
     
     void TorchPuzzleSolved()
     {
         Debug.Log("火把谜题解决！");
         SetGameState(GameState.Playing);
-        // 这里可以触发宝箱开启等逻辑
     }
     
     void TorchPuzzleFailed()
     {
         Debug.Log("火把谜题失败！");
         currentTorchInput = "";
-        // 这里可以触发惩罚机制
+        Array.Clear(torchSequenceCheck, 0, torchSequenceCheck.Length);
     }
     
     string FormatTime(float timeInSeconds)
     {
         int minutes = Mathf.FloorToInt(timeInSeconds / 60f);
         int seconds = Mathf.FloorToInt(timeInSeconds % 60f);
-        return string.Format("{0:00}:{1:00}", minutes, seconds);
+        return $"{minutes:00}:{seconds:00}";
     }
     
     // ========== 场景管理 ==========
@@ -470,10 +575,10 @@ public class GameManager : MonoBehaviour
     
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        InitializeUIReferences();
+        
         if (currentState == GameState.Loading)
-        {
             SetGameState(GameState.Playing);
-        }
     }
     
     void OnEnable()
@@ -484,5 +589,11 @@ public class GameManager : MonoBehaviour
     void OnDisable()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+        SavePlayerPrefs();
+    }
+    
+    void OnApplicationQuit()
+    {
+        SavePlayerPrefs();
     }
 }
