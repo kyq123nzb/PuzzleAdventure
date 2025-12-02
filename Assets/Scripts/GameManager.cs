@@ -278,25 +278,47 @@ public class GameManager : MonoBehaviour
         #endif
     }
     
+    // ========== 调试方法：检查当前收集状态 ==========
+    [ContextMenu("调试：检查拼图收集状态")]
+    public void DebugCheckPuzzleStatus()
+    {
+        Debug.LogWarning($"=== 拼图收集状态调试 ===");
+        Debug.LogWarning($"当前游戏状态: {currentState}");
+        Debug.LogWarning($"总拼图数: {totalPuzzles}");
+        Debug.LogWarning($"已收集数: {collectedPuzzles}");
+        Debug.LogWarning($"收集进度: {collectedPuzzles}/{totalPuzzles}");
+        Debug.LogWarning($"Boss状态: {isBossDefeated}");
+        
+        for (int i = 1; i <= totalPuzzles; i++)
+        {
+            bool collected = puzzleCollectionStatus.ContainsKey(i) && puzzleCollectionStatus[i];
+            Debug.LogWarning($"拼图 {i}: {(collected ? "✅ 已收集" : "❌ 未收集")}");
+        }
+        
+        if (collectedPuzzles >= totalPuzzles)
+        {
+            Debug.LogWarning($"🎉 所有拼图已收集！应该显示庆祝界面！");
+            ShowPuzzleCompleteCelebration();
+        }
+        else
+        {
+            Debug.LogWarning($"还需收集 {totalPuzzles - collectedPuzzles} 块拼图");
+        }
+    }
+    
     // ========== 公共接口 - 拼图收集系统 ==========
     public void CollectPuzzle(int puzzleId)
     {
         if (currentState != GameState.Playing)
         {
-            Debug.LogWarning($"无法收集拼图 {puzzleId}: 游戏状态为 {currentState}，非Playing状态");
+            Debug.LogWarning($"无法收集拼图 {puzzleId}: 游戏状态为 {currentState}，非Playing状态！");
             return;
         }
-        
-        // 添加详细的调试信息
-        Debug.Log($"尝试收集拼图 ID: {puzzleId}");
-        Debug.Log($"ID范围检查: {puzzleId >= 1 && puzzleId <= totalPuzzles}");
-        Debug.Log($"是否已收集: {puzzleCollectionStatus.ContainsKey(puzzleId) && puzzleCollectionStatus[puzzleId]}");
         
         if (puzzleId >= 1 && puzzleId <= totalPuzzles)
         {
             if (!puzzleCollectionStatus.ContainsKey(puzzleId))
             {
-                Debug.LogError($"拼图ID {puzzleId} 不存在于字典中！重新初始化字典...");
                 puzzleCollectionStatus[puzzleId] = false;
             }
             
@@ -305,15 +327,16 @@ public class GameManager : MonoBehaviour
                 puzzleCollectionStatus[puzzleId] = true;
                 collectedPuzzles++;
                 
-                OnPuzzleCollected?.Invoke(puzzleId);
-                Debug.Log($"✓ 成功收集拼图 {puzzleId}！进度：{collectedPuzzles}/{totalPuzzles}");
+                Debug.LogWarning($"成功收集拼图 {puzzleId}！当前进度：{collectedPuzzles}/{totalPuzzles}");
                 
-                // 检查胜利条件
+                // 触发事件（供其他系统订阅）
+                OnPuzzleCollected?.Invoke(puzzleId);
+                
+                // 直接更新UI（备用机制，确保UI更新）
+                UpdateProgressUI();
+                
+                // 检查胜利条件（可能会触发Victory或显示庆祝界面）
                 CheckVictoryCondition();
-            }
-            else
-            {
-                Debug.LogWarning($"拼图 {puzzleId} 已经收集过了");
             }
         }
         else
@@ -321,6 +344,7 @@ public class GameManager : MonoBehaviour
             Debug.LogError($"拼图ID {puzzleId} 超出有效范围 (1-{totalPuzzles})");
         }
     }
+    
     
     public bool IsPuzzleCollected(int puzzleId)
     {
@@ -445,17 +469,60 @@ public class GameManager : MonoBehaviour
     // ========== 检查胜利条件 ==========
     void CheckVictoryCondition()
     {
+        Debug.LogWarning($"=== CheckVictoryCondition 被调用 ===");
+        Debug.LogWarning($"当前收集数量: {collectedPuzzles}, 总数量: {totalPuzzles}");
+        Debug.LogWarning($"条件检查: collectedPuzzles({collectedPuzzles}) >= totalPuzzles({totalPuzzles}) = {collectedPuzzles >= totalPuzzles}");
+        Debug.LogWarning($"Boss状态: {isBossDefeated}");
+        
         if (collectedPuzzles >= totalPuzzles && isBossDefeated)
         {
+            Debug.LogWarning("所有拼图已收集且Boss已击败，触发胜利！");
             Victory();
         }
         else if (collectedPuzzles >= totalPuzzles)
         {
-            Debug.Log("所有拼图已收集，但还需击败Boss！");
+            Debug.LogWarning($"🎉🎉🎉 所有拼图已收集（{collectedPuzzles}/{totalPuzzles}），但还需击败Boss！");
+            Debug.LogWarning("准备显示拼图收集完成庆祝界面");
+            
+            // 显示拼图收集完成庆祝界面
+            ShowPuzzleCompleteCelebration();
         }
         else if (isBossDefeated)
         {
-            Debug.Log("Boss已击败，但还需收集所有拼图！");
+            Debug.LogWarning($"Boss已击败，但还需收集所有拼图！当前: {collectedPuzzles}/{totalPuzzles}");
+        }
+        else
+        {
+            Debug.LogWarning($"进度：{collectedPuzzles}/{totalPuzzles}，继续收集...");
+        }
+    }
+    
+    // 显示拼图收集完成庆祝界面
+    void ShowPuzzleCompleteCelebration()
+    {
+        Debug.LogWarning($"GameManager: 显示拼图完成庆祝界面，当前收集: {collectedPuzzles}/{totalPuzzles}");
+        
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.ShowPuzzleCompleteCelebration();
+        }
+        else
+        {
+            Debug.LogError("GameManager: UIManager.Instance为空！无法显示庆祝界面！");
+        }
+    }
+    
+    // 直接更新UI进度（备用机制，确保UI更新）
+    void UpdateProgressUI()
+    {
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdatePuzzleProgress(collectedPuzzles, totalPuzzles);
+            Debug.Log($"GameManager: 直接更新UI进度: {collectedPuzzles}/{totalPuzzles}");
+        }
+        else
+        {
+            Debug.LogWarning("GameManager: UIManager.Instance为空，无法更新进度UI！");
         }
     }
     
