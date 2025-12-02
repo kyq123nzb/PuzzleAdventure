@@ -20,7 +20,7 @@ public class PauseMenuController : MonoBehaviour
     public float fadeSpeed = 2f;
     
     private CanvasGroup canvasGroup;
-    private bool isVisible = false;
+    // 移除了未使用的 isVisible 字段
     
     void Start()
     {
@@ -60,7 +60,7 @@ public class PauseMenuController : MonoBehaviour
     
     public void Show()
     {
-        isVisible = true;
+        // 移除了 isVisible = true;
         if (pausePanel != null)
         {
             pausePanel.SetActive(true);
@@ -79,7 +79,7 @@ public class PauseMenuController : MonoBehaviour
     
     public void Hide()
     {
-        isVisible = false;
+        // 移除了 isVisible = false;
         if (pausePanel != null)
         {
             if (canvasGroup != null && useFadeAnimation)

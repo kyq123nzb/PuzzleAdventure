@@ -6,16 +6,20 @@ public class PlayerInteract : MonoBehaviour
 {
     [Header("交互设置")]
     public float interactDistance = 3f;
+    public float interactRadius = 1f; // 新增：检测半径
     public KeyCode interactKey = KeyCode.E;
     
-    [Header("层级设置")] // ← 新增这部分
+    [Header("层级设置")]
     public LayerMask interactableLayerMask = 1 << 6; // 默认第6层(Interactable)
     
     [Header("调试设置")]
     public bool showDebugRay = true;
+    public bool showDebugSphere = true; // 新增：显示检测球体
     public Color debugRayColor = Color.red;
+    public Color debugSphereColor = Color.blue; // 新增：球体颜色
     
     private Camera playerCamera;
+    private Interactable currentInteractable; // 当前可交互物体
     
     void Start()
     {
@@ -40,29 +44,67 @@ public class PlayerInteract : MonoBehaviour
         {
             Debug.Log($"PlayerInteract: 成功找到Camera - {playerCamera.gameObject.name}");
         }
-        
-        // 自动设置LayerMask（如果使用第6层）
-        if (interactableLayerMask.value == (1 << 6))
-        {
-            Debug.Log("使用默认Interactable层 (第6层)");
-        }
     }
     
     void Update()
     {
-        // 在编辑时持续显示射线
-        if (showDebugRay && playerCamera != null)
-        {
-            Debug.DrawRay(playerCamera.transform.position, 
-                         playerCamera.transform.forward * interactDistance, 
-                         debugRayColor);
-        }
+        // 持续检测可交互物体
+        CheckForInteractables();
         
         // 检测交互输入
         if (Input.GetKeyDown(interactKey))
         {
             Debug.Log("E键按下，尝试交互");
             TryInteract();
+        }
+    }
+    
+    void CheckForInteractables()
+    {
+        if (playerCamera == null) return;
+        
+        Vector3 rayOrigin = playerCamera.transform.position;
+        Vector3 rayDirection = playerCamera.transform.forward;
+        
+        // 使用球形射线检测，检测范围内的所有物体
+        RaycastHit[] hits = Physics.SphereCastAll(
+            rayOrigin, 
+            interactRadius, 
+            rayDirection, 
+            interactDistance, 
+            interactableLayerMask
+        );
+        
+        Interactable closestInteractable = null;
+        float closestDistance = float.MaxValue;
+        
+        // 遍历所有命中的物体，找到最近的可交互物体
+        foreach (RaycastHit hit in hits)
+        {
+            Interactable interactable = hit.collider.GetComponent<Interactable>();
+            if (interactable == null)
+            {
+                interactable = hit.collider.GetComponentInParent<Interactable>();
+            }
+            
+            if (interactable != null && interactable.canInteract)
+            {
+                float distance = Vector3.Distance(rayOrigin, hit.point);
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestInteractable = interactable;
+                }
+            }
+        }
+        
+        // 更新当前可交互物体
+        currentInteractable = closestInteractable;
+        
+        // 显示调试信息
+        if (currentInteractable != null)
+        {
+            Debug.Log($"发现可交互物体: {currentInteractable.gameObject.name} (距离: {closestDistance:F2})");
         }
     }
     
@@ -74,54 +116,75 @@ public class PlayerInteract : MonoBehaviour
             return;
         }
         
-        RaycastHit hit;
-        Vector3 rayOrigin = playerCamera.transform.position;
-        Vector3 rayDirection = playerCamera.transform.forward;
-        
-        // 使用在Inspector中设置的interactableLayerMask ← 修改这行
-        if (Physics.Raycast(rayOrigin, rayDirection, out hit, interactDistance, interactableLayerMask))
+        if (currentInteractable != null && currentInteractable.canInteract)
         {
-            Debug.Log($"射线击中: {hit.collider.gameObject.name} (距离: {hit.distance:F2})");
-            
-            Interactable interactable = hit.collider.GetComponent<Interactable>();
-            if (interactable == null)
-            {
-                interactable = hit.collider.GetComponentInParent<Interactable>();
-            }
-            
-            if (interactable != null)
-            {
-                Debug.Log($"找到Interactable组件: {interactable.gameObject.name}, canInteract = {interactable.canInteract}");
-                if (interactable.canInteract)
-                {
-                    interactable.Interact();
-                }
-                else
-                {
-                    Debug.Log($"物体 {interactable.gameObject.name} 当前不可交互");
-                }
-            }
-            else
-            {
-                Debug.Log($"物体 {hit.collider.gameObject.name} 没有Interactable组件");
-            }
+            Debug.Log($"与 {currentInteractable.gameObject.name} 交互");
+            currentInteractable.Interact();
         }
         else
         {
-            Debug.Log($"射线没有击中任何可交互物体");
+            Debug.Log("范围内没有可交互物体");
         }
     }
     
-    // 在编辑器中可视化交互距离
+    // 在Scene视图中可视化
     void OnDrawGizmosSelected()
     {
-        if (playerCamera != null && showDebugRay)
+        if (playerCamera != null)
         {
-            Gizmos.color = debugRayColor;
-            Gizmos.DrawRay(playerCamera.transform.position, 
-                          playerCamera.transform.forward * interactDistance);
-            Gizmos.DrawWireSphere(playerCamera.transform.position + 
-                                 playerCamera.transform.forward * interactDistance, 0.1f);
+            Vector3 rayOrigin = playerCamera.transform.position;
+            Vector3 rayDirection = playerCamera.transform.forward;
+            Vector3 rayEnd = rayOrigin + rayDirection * interactDistance;
+            
+            if (showDebugRay)
+            {
+                // 绘制中心射线
+                Gizmos.color = debugRayColor;
+                Gizmos.DrawLine(rayOrigin, rayEnd);
+            }
+            
+            if (showDebugSphere)
+            {
+                // 绘制检测球体
+                Gizmos.color = debugSphereColor;
+                
+                // 在射线起点绘制球体
+                Gizmos.DrawWireSphere(rayOrigin, interactRadius);
+                
+                // 在射线终点绘制球体
+                Gizmos.DrawWireSphere(rayEnd, interactRadius);
+                
+                // 绘制连接两个球体的胶囊形状
+                DrawCapsuleGizmo(rayOrigin, rayEnd, interactRadius);
+            }
+        }
+    }
+    
+    // 绘制胶囊体Gizmo（用于可视化检测范围）
+    void DrawCapsuleGizmo(Vector3 start, Vector3 end, float radius)
+    {
+        // 绘制连接线
+        Gizmos.DrawLine(start + Vector3.up * radius, end + Vector3.up * radius);
+        Gizmos.DrawLine(start + Vector3.down * radius, end + Vector3.down * radius);
+        Gizmos.DrawLine(start + Vector3.left * radius, end + Vector3.left * radius);
+        Gizmos.DrawLine(start + Vector3.right * radius, end + Vector3.right * radius);
+        
+        // 绘制侧面线
+        Gizmos.DrawLine(start + Vector3.forward * radius, end + Vector3.forward * radius);
+        Gizmos.DrawLine(start + Vector3.back * radius, end + Vector3.back * radius);
+    }
+    
+    // 在Scene视图中持续显示（不只是选中时）
+    void OnDrawGizmos()
+    {
+        if (showDebugSphere && playerCamera != null)
+        {
+            Vector3 rayOrigin = playerCamera.transform.position;
+            Vector3 rayDirection = playerCamera.transform.forward;
+            Vector3 rayEnd = rayOrigin + rayDirection * interactDistance;
+            
+            Gizmos.color = new Color(debugSphereColor.r, debugSphereColor.g, debugSphereColor.b, 0.3f);
+            DrawCapsuleGizmo(rayOrigin, rayEnd, interactRadius);
         }
     }
 }
