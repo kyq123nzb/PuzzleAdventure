@@ -18,8 +18,10 @@ public class PlayerController : MonoBehaviour
     [Tooltip("0=左键, 1=右键, 2=中键")]
     public int rotateMouseButton = 0; // 选择按键
     
+    [Header("摄像机引用")]
+    [SerializeField] private Camera playerCamera; // 改为序列化字段，可以在 Inspector 中赋值
+    
     private CharacterController controller;
-    private Camera playerCamera;
     private Vector3 velocity;
     private float xRotation = 0f;
     private bool isRotatingView = false;
@@ -27,23 +29,54 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         controller = GetComponent<CharacterController>();
-        playerCamera = GetComponentInChildren<Camera>();
+        
+        // 如果没有手动设置摄像机，尝试自动查找
+        if (playerCamera == null)
+        {
+            playerCamera = GetComponentInChildren<Camera>();
+            
+            // 如果还是没有找到，尝试查找任何激活的摄像机
+            if (playerCamera == null)
+            {
+                playerCamera = Camera.main; // 使用主摄像机
+                Debug.LogWarning("未找到子物体中的Camera，使用Camera.main");
+            }
+        }
+        
+        // 验证摄像机
+        if (playerCamera == null)
+        {
+            Debug.LogError("未找到可用的摄像机！请确保Player有子物体Camera或场景中有主摄像机");
+            // 禁用脚本，避免继续出错
+            enabled = false;
+            return;
+        }
         
         // 初始时不锁定鼠标
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         
-        Debug.Log($"当前使用鼠标按钮 {rotateMouseButton} 进行视角旋转");
+        Debug.Log($"当前使用鼠标按钮 {rotateMouseButton} 进行视角旋转，摄像机: {playerCamera.name}");
     }
     
     void Update()
     {
+        // 如果摄像机为空，不执行更新
+        if (playerCamera == null) return;
+        
         HandleViewRotation();
         HandleMovement();
     }
     
     void HandleViewRotation()
     {
+        // 安全检查
+        if (playerCamera == null)
+        {
+            Debug.LogWarning("摄像机为空，无法处理视角旋转");
+            return;
+        }
+        
         // 检查是否按下了设置的鼠标按钮
         if (Input.GetMouseButtonDown(rotateMouseButton))
         {
@@ -78,6 +111,9 @@ public class PlayerController : MonoBehaviour
     
     void HandleMovement()
     {
+        // 安全检查
+        if (controller == null) return;
+        
         // 地面检测
         bool isGrounded = controller.isGrounded;
         if (isGrounded && velocity.y < 0)
@@ -107,5 +143,22 @@ public class PlayerController : MonoBehaviour
         // 应用重力
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
+    }
+    
+    // 一个调试方法，用于手动创建摄像机
+    void CreateCameraIfMissing()
+    {
+        if (playerCamera == null)
+        {
+            GameObject cameraObject = new GameObject("PlayerCamera");
+            cameraObject.transform.SetParent(transform);
+            cameraObject.transform.localPosition = new Vector3(0, 0.7f, 0); // 稍微高于地面
+            cameraObject.transform.localRotation = Quaternion.identity;
+            
+            playerCamera = cameraObject.AddComponent<Camera>();
+            cameraObject.AddComponent<AudioListener>(); // 添加音频监听器
+            
+            Debug.Log("已创建新的摄像机");
+        }
     }
 }

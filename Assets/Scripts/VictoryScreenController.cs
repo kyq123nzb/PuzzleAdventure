@@ -91,8 +91,8 @@ public class VictoryScreenController : MonoBehaviour
     {
         if (completionStatsText != null && GameManager.Instance != null)
         {
-            int collected = GameManager.Instance.GetCollectedPuzzles();
-            int total = GameManager.Instance.totalPuzzles;
+            int collected = GameManager.Instance.GetCollectedPuzzlesCount();  // 修复：使用正确的方法名
+            int total = GameManager.Instance.TotalPuzzles;  // 修复：使用公共属性
             completionStatsText.text = $"收集进度: {collected}/{total} 拼图";
         }
     }
@@ -197,6 +197,10 @@ public class VictoryScreenController : MonoBehaviour
         {
             UIManager.Instance.RestartGame();
         }
+        else if (GameManager.Instance != null)  // 添加备用方案：使用GameManager
+        {
+            GameManager.Instance.RestartGame();
+        }
         else
         {
             Time.timeScale = 1f;
@@ -210,6 +214,15 @@ public class VictoryScreenController : MonoBehaviour
         {
             UIManager.Instance.QuitToMainMenu();
         }
+        else if (GameManager.Instance != null)  // 添加备用方案：使用GameManager
+        {
+            GameManager.Instance.ReturnToMainMenu();
+        }
+        else
+        {
+            Time.timeScale = 1f;
+            SceneManager.LoadScene("MainMenu");
+        }
     }
     
     void OnQuitGameClicked()
@@ -217,6 +230,10 @@ public class VictoryScreenController : MonoBehaviour
         if (UIManager.Instance != null)
         {
             UIManager.Instance.QuitGame();
+        }
+        else if (GameManager.Instance != null)  // 添加备用方案：使用GameManager
+        {
+            GameManager.Instance.QuitGame();
         }
         else
         {

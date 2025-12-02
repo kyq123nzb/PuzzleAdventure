@@ -34,7 +34,7 @@ public class PuzzleProgressUI : MonoBehaviour
             progressFillImage.fillAmount = 0f;
         }
         
-        UpdateProgress(0, GameManager.Instance != null ? GameManager.Instance.totalPuzzles : 9);
+        UpdateProgress(0, GameManager.Instance != null ? GameManager.Instance.TotalPuzzles : 9);
     }
     
     void Update()
@@ -121,8 +121,8 @@ public class PuzzleProgressUI : MonoBehaviour
     {
         if (GameManager.Instance != null)
         {
-            UpdateProgress(GameManager.Instance.GetCollectedPuzzles(), 
-                          GameManager.Instance.totalPuzzles);
+            UpdateProgress(GameManager.Instance.GetCollectedPuzzlesCount(), 
+                          GameManager.Instance.TotalPuzzles);
         }
     }
 }
