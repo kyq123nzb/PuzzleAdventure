@@ -17,8 +17,8 @@ public class PuzzleProgressDisplay : MonoBehaviour
     [Header("拼图图标设置")]
     public Transform iconsContainer;            // 图标容器
     public GameObject iconPrefab;               // 图标预制体
-    public List<Sprite> collectedIconSprites = new List<Sprite>(); // 每个拼图的收集图标（按ID顺序）
-    public Sprite defaultUncollectedIcon;       // 默认未收集图标
+    public Sprite collectedIcon;                // 已收集图标
+    public Sprite uncollectedIcon;              // 未收集图标
     
     [Header("图标颜色设置")]
     public Color collectedColor = Color.white;           // 已收集颜色
@@ -27,10 +27,6 @@ public class PuzzleProgressDisplay : MonoBehaviour
     [Header("布局设置")]
     public int maxIconsPerRow = 9;              // 每行最多图标数
     public float iconSpacing = 60f;             // 图标间距
-    public Vector2 iconSize = new Vector2(60, 60); // 图标大小
-    
-    [Header("文本显示")]
-    public string progressFormat = "收集进度: {0}/{1}"; // 进度文本格式
     
     [Header("动画设置")]
     public bool animateCollect = true;          // 是否播放收集动画
@@ -45,23 +41,11 @@ public class PuzzleProgressDisplay : MonoBehaviour
     private List<Image> iconImages = new List<Image>();
     private List<TextMeshProUGUI> iconTexts = new List<TextMeshProUGUI>();
     private List<RectTransform> iconTransforms = new List<RectTransform>();
-    private List<int> iconPuzzleIds = new List<int>(); // 存储每个图标对应的拼图ID
     
     void Start()
     {
         // 先尝试自动查找组件
         AutoFindComponents();
-        
-        // 检查必要的组件
-        if (progressBarFill == null)
-        {
-            Debug.LogError("PuzzleProgressDisplay: 未找到 ProgressBarFill 组件！");
-        }
-        
-        if (progressText == null)
-        {
-            Debug.LogError("PuzzleProgressDisplay: 未找到 progressText 组件！");
-        }
         
         InitializeDisplay();
         
@@ -95,25 +79,12 @@ public class PuzzleProgressDisplay : MonoBehaviour
                 container.transform.SetParent(transform);
                 iconsContainer = container.transform;
                 
-                // 添加RectTransform并设置为网格布局
+                // 添加RectTransform
                 RectTransform rt = container.AddComponent<RectTransform>();
-                
-                // 设置为拉伸到父对象
-                rt.anchorMin = Vector2.zero;
-                rt.anchorMax = Vector2.one;
+                rt.anchorMin = new Vector2(0.5f, 0.5f);
+                rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.offsetMin = new Vector2(20, 20);
-                rt.offsetMax = new Vector2(-20, -20);
-                
-                // 添加网格布局组件
-                GridLayoutGroup grid = container.AddComponent<GridLayoutGroup>();
-                grid.cellSize = iconSize;
-                grid.spacing = new Vector2(iconSpacing, iconSpacing);
-                grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
-                grid.startAxis = GridLayoutGroup.Axis.Horizontal;
-                grid.childAlignment = TextAnchor.MiddleCenter;
-                grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-                grid.constraintCount = maxIconsPerRow;
+                rt.anchoredPosition = Vector2.zero;
             }
             else
             {
@@ -136,8 +107,6 @@ public class PuzzleProgressDisplay : MonoBehaviour
     {
         // 获取总拼图数
         int totalPuzzles = GameManager.Instance != null ? GameManager.Instance.TotalPuzzles : 9;
-        
-        Debug.Log($"初始化拼图显示，总共 {totalPuzzles} 个拼图");
         
         // 创建图标
         CreatePuzzleIcons(totalPuzzles);
@@ -164,7 +133,6 @@ public class PuzzleProgressDisplay : MonoBehaviour
         iconImages.Clear();
         iconTexts.Clear();
         iconTransforms.Clear();
-        iconPuzzleIds.Clear();
         
         // 创建图标
         for (int i = 1; i <= totalPuzzles; i++)
@@ -172,54 +140,79 @@ public class PuzzleProgressDisplay : MonoBehaviour
             // 实例化图标（如果有预制体使用预制体，否则动态创建）
             GameObject iconObj = CreateIconObject(i);
             
-            // 获取或添加组件
+            // 获取组件
             Image iconImage = iconObj.GetComponent<Image>();
+            TextMeshProUGUI iconText = iconObj.GetComponentInChildren<TextMeshProUGUI>();
+            RectTransform rectTransform = iconObj.GetComponent<RectTransform>();
+            
+            // 如果缺少Image组件，添加一个
             if (iconImage == null)
             {
                 iconImage = iconObj.AddComponent<Image>();
             }
             
-            // 添加编号文本
-            GameObject textObj = new GameObject("PuzzleNumber");
-            textObj.transform.SetParent(iconObj.transform);
-            TextMeshProUGUI iconText = textObj.AddComponent<TextMeshProUGUI>();
+            // 如果缺少TextMeshPro组件，创建一个
+            if (iconText == null)
+            {
+                GameObject textObj = new GameObject("NumberText");
+                textObj.transform.SetParent(iconObj.transform);
+                iconText = textObj.AddComponent<TextMeshProUGUI>();
+                
+                // 设置TextMeshPro组件
+                iconText.alignment = TextAlignmentOptions.Center;
+                iconText.fontSize = 20;
+                iconText.color = Color.white;
+                iconText.text = i.ToString();
+                
+                // 设置RectTransform
+                RectTransform textRect = textObj.GetComponent<RectTransform>();
+                textRect.anchorMin = Vector2.zero;
+                textRect.anchorMax = Vector2.one;
+                textRect.offsetMin = Vector2.zero;
+                textRect.offsetMax = Vector2.zero;
+            }
+            else
+            {
+                // 设置编号
+                iconText.text = i.ToString();
+            }
             
-            // 设置TextMeshPro组件
-            iconText.alignment = TextAlignmentOptions.Center;
-            iconText.fontSize = 16;
-            iconText.color = Color.white;
-            iconText.text = i.ToString();
+            // 设置位置
+            if (rectTransform != null)
+            {
+                // 计算位置（水平排列）
+                float xPos = (i - 1) * iconSpacing;
+                if (i > maxIconsPerRow)
+                {
+                    // 如果超过每行最大数，换行显示
+                    int row = Mathf.FloorToInt((i - 1) / maxIconsPerRow);
+                    int col = (i - 1) % maxIconsPerRow;
+                    xPos = col * iconSpacing;
+                    float yPos = -row * iconSpacing;
+                    rectTransform.anchoredPosition = new Vector2(xPos, yPos);
+                }
+                else
+                {
+                    rectTransform.anchoredPosition = new Vector2(xPos, 0);
+                }
+                
+                rectTransform.sizeDelta = new Vector2(40, 40);
+            }
             
-            // 设置文本的RectTransform - 覆盖整个图标
-            RectTransform textRect = textObj.GetComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = new Vector2(2, 2);
-            textRect.offsetMax = new Vector2(-2, -2);
-            textRect.pivot = new Vector2(0.5f, 0.5f);
-            
-            RectTransform rectTransform = iconObj.GetComponent<RectTransform>();
+            // 添加事件监听（可选）
+            AddIconEventListeners(iconObj, i);
             
             // 存储组件
             iconImages.Add(iconImage);
             iconTexts.Add(iconText);
             iconTransforms.Add(rectTransform);
-            iconPuzzleIds.Add(i); // 记录这个图标对应的拼图ID
-            
-            // 添加事件监听（可选）
-            AddIconEventListeners(iconObj, i);
-            
-            Debug.Log($"创建拼图图标: ID {i}");
         }
-        
-        // 确保容器布局更新
-        LayoutRebuilder.ForceRebuildLayoutImmediate(iconsContainer.GetComponent<RectTransform>());
     }
     
     /// <summary>
     /// 创建图标对象
     /// </summary>
-    GameObject CreateIconObject(int puzzleId)
+    GameObject CreateIconObject(int index)
     {
         GameObject iconObj;
         
@@ -231,15 +224,12 @@ public class PuzzleProgressDisplay : MonoBehaviour
         else
         {
             // 动态创建
-            iconObj = new GameObject($"PuzzleIcon_{puzzleId}");
+            iconObj = new GameObject($"PuzzleIcon_{index}");
             iconObj.transform.SetParent(iconsContainer);
-            
-            // 添加RectTransform并设置大小
-            RectTransform rt = iconObj.AddComponent<RectTransform>();
-            rt.sizeDelta = iconSize;
+            iconObj.AddComponent<RectTransform>();
         }
         
-        iconObj.name = $"PuzzleIcon_{puzzleId}";
+        iconObj.name = $"PuzzleIcon_{index}";
         return iconObj;
     }
     
@@ -273,8 +263,6 @@ public class PuzzleProgressDisplay : MonoBehaviour
     
     void OnPuzzleCollected(int puzzleId)
     {
-        Debug.Log($"收到拼图收集事件: ID {puzzleId}");
-        
         // 更新进度显示
         UpdateProgressDisplay();
         
@@ -287,8 +275,6 @@ public class PuzzleProgressDisplay : MonoBehaviour
     
     void OnGameStateChanged(GameManager.GameState newState)
     {
-        Debug.Log($"游戏状态改变: {newState}");
-        
         // 只有在游戏进行中才显示进度
         bool shouldShow = newState == GameManager.GameState.Playing || 
                          newState == GameManager.GameState.PuzzleSolving ||
@@ -305,49 +291,33 @@ public class PuzzleProgressDisplay : MonoBehaviour
     
     void UpdateProgressDisplay()
     {
-        if (GameManager.Instance == null)
-        {
-            Debug.LogWarning("GameManager.Instance 为空");
-            return;
-        }
+        if (GameManager.Instance == null) return;
         
         int collected = GameManager.Instance.GetCollectedPuzzlesCount();
         int total = GameManager.Instance.TotalPuzzles;
         
-        Debug.Log($"更新进度显示: {collected}/{total}");
+        Debug.Log($"更新进度: {collected}/{total}");
         
         // 更新进度条
         if (progressBarFill != null)
         {
             progressBarFill.SetProgress(collected, total);
         }
-        else
-        {
-            Debug.LogWarning("ProgressBarFill 组件为空");
-        }
         
         // 更新进度文本
         if (progressText != null)
         {
-            progressText.text = string.Format(progressFormat, collected, total);
+            progressText.text = $"{collected}/{total}";
             
             // 如果全部收集完成，改变颜色
             if (collected >= total)
             {
                 progressText.color = Color.yellow;
-                progressText.fontStyle = FontStyles.Bold;
             }
             else
             {
                 progressText.color = Color.white;
-                progressText.fontStyle = FontStyles.Normal;
             }
-            
-            Debug.Log($"设置进度文本: {progressText.text}");
-        }
-        else
-        {
-            Debug.LogWarning("progressText 组件为空");
         }
     }
     
@@ -355,69 +325,43 @@ public class PuzzleProgressDisplay : MonoBehaviour
     {
         if (GameManager.Instance == null) return;
         
-        for (int i = 0; i < iconPuzzleIds.Count; i++)
+        for (int i = 1; i <= iconImages.Count; i++)
         {
-            UpdatePuzzleIcon(iconPuzzleIds[i]);
+            UpdatePuzzleIcon(i);
         }
     }
     
     void UpdatePuzzleIcon(int puzzleId)
     {
-        // 找到对应的图标索引
-        int index = iconPuzzleIds.IndexOf(puzzleId);
-        if (index == -1 || index >= iconImages.Count) 
-        {
-            Debug.LogWarning($"找不到拼图ID {puzzleId} 对应的图标");
-            return;
-        }
+        if (puzzleId < 1 || puzzleId > iconImages.Count) return;
         
+        int index = puzzleId - 1;
         bool isCollected = GameManager.Instance != null && 
                           GameManager.Instance.IsPuzzleCollected(puzzleId);
-        
-        Debug.Log($"更新拼图图标 {puzzleId}: 已收集 = {isCollected}");
         
         // 更新图标
         if (iconImages[index] != null)
         {
-            // 根据是否收集来设置图标
-            if (isCollected)
+            // 如果有设置图标Sprite，则使用
+            if (collectedIcon != null && uncollectedIcon != null)
             {
-                // 已收集：使用对应的收集图标
-                if (puzzleId - 1 < collectedIconSprites.Count && collectedIconSprites[puzzleId - 1] != null)
-                {
-                    iconImages[index].sprite = collectedIconSprites[puzzleId - 1];
-                    iconImages[index].color = collectedColor;
-                }
-                else if (defaultUncollectedIcon != null)
-                {
-                    // 如果没有指定特定图标，使用默认图标但调整颜色
-                    iconImages[index].sprite = defaultUncollectedIcon;
-                    iconImages[index].color = collectedColor;
-                }
+                iconImages[index].sprite = isCollected ? collectedIcon : uncollectedIcon;
             }
-            else
-            {
-                // 未收集：使用未收集图标
-                if (defaultUncollectedIcon != null)
-                {
-                    iconImages[index].sprite = defaultUncollectedIcon;
-                }
-                iconImages[index].color = uncollectedColor;
-            }
+            
+            iconImages[index].color = isCollected ? collectedColor : uncollectedColor;
         }
         
         // 更新文本
         if (iconTexts[index] != null)
         {
             iconTexts[index].color = isCollected ? collectedColor : uncollectedColor;
-            iconTexts[index].text = puzzleId.ToString(); // 显示拼图编号
             
             // 如果收集了，可以添加一些特效
             if (isCollected && addTextOutline)
             {
                 AddTextOutlineEffect(iconTexts[index]);
             }
-            else
+            else if (!isCollected && addTextOutline)
             {
                 RemoveTextOutlineEffect(iconTexts[index]);
             }
@@ -531,36 +475,19 @@ public class PuzzleProgressDisplay : MonoBehaviour
         {
             Debug.Log($"拼图 {puzzleId} 已收集");
             // 这里可以打开拼图详情面板
-            // 播放收集的拼图图案
-            ShowPuzzleDetails(puzzleId);
         }
         else
         {
             Debug.Log($"拼图 {puzzleId} 尚未收集");
-            // 提示玩家去收集
         }
         
         // 点击动画
-        int index = iconPuzzleIds.IndexOf(puzzleId);
-        if (index != -1)
-        {
-            StartCoroutine(PlayIconClickAnimation(index));
-        }
-    }
-    
-    /// <summary>
-    /// 显示拼图详情（可以在这里显示完整的拼图图案）
-    /// </summary>
-    void ShowPuzzleDetails(int puzzleId)
-    {
-        // 这里可以实现显示拼图大图的功能
-        Debug.Log($"显示拼图 {puzzleId} 的详细信息");
-        // 例如：打开一个UI面板，显示完整的拼图图案
+        StartCoroutine(PlayIconClickAnimation(puzzleId - 1));
     }
     
     void OnIconEnter(int puzzleId)
     {
-        int index = iconPuzzleIds.IndexOf(puzzleId);
+        int index = puzzleId - 1;
         if (index < 0 || index >= iconTransforms.Count || iconTransforms[index] == null)
             return;
         
@@ -570,7 +497,7 @@ public class PuzzleProgressDisplay : MonoBehaviour
     
     void OnIconExit(int puzzleId)
     {
-        int index = iconPuzzleIds.IndexOf(puzzleId);
+        int index = puzzleId - 1;
         if (index < 0 || index >= iconTransforms.Count || iconTransforms[index] == null)
             return;
         
@@ -640,23 +567,12 @@ public class PuzzleProgressDisplay : MonoBehaviour
     }
     
     /// <summary>
-    /// 设置拼图图标（为每个拼图设置特定的收集图标）
+    /// 设置图标精灵
     /// </summary>
-    public void SetPuzzleIcons(List<Sprite> icons)
+    public void SetIcons(Sprite collectedSprite, Sprite uncollectedSprite)
     {
-        if (icons != null)
-        {
-            collectedIconSprites = icons;
-            UpdateAllIcons();
-        }
-    }
-    
-    /// <summary>
-    /// 设置默认未收集图标
-    /// </summary>
-    public void SetDefaultIcon(Sprite icon)
-    {
-        defaultUncollectedIcon = icon;
+        collectedIcon = collectedSprite;
+        uncollectedIcon = uncollectedSprite;
         UpdateAllIcons();
     }
 }

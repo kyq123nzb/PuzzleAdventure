@@ -91,7 +91,7 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         LoadPlayerPrefs();
-        InitializeGameData(); // 移到这里，确保在Start中初始化
+        InitializeGameData();
         SetGameState(GameState.MainMenu);
         InitializeUIReferences();
         Debug.Log($"GameManager Start: 初始化完成，总拼图数: {totalPuzzles}");
@@ -311,23 +311,26 @@ public class GameManager : MonoBehaviour
     {
         if (currentState != GameState.Playing)
         {
-            Debug.LogWarning($"无法收集拼图 {puzzleId}: 游戏状态为 {currentState}，非Playing状态！");
+            Debug.LogWarning($"无法收集拼图 {puzzleId}: 游戏状态为 {currentState}");
             return;
         }
         
         if (puzzleId >= 1 && puzzleId <= totalPuzzles)
         {
+            // 修复：先检查是否包含，如果包含就获取状态，如果不包含就初始化
             if (!puzzleCollectionStatus.ContainsKey(puzzleId))
             {
                 puzzleCollectionStatus[puzzleId] = false;
             }
             
-            if (!puzzleCollectionStatus[puzzleId])
+            bool isAlreadyCollected = puzzleCollectionStatus[puzzleId];
+            
+            if (!isAlreadyCollected)
             {
                 puzzleCollectionStatus[puzzleId] = true;
                 collectedPuzzles++;
                 
-                Debug.LogWarning($"成功收集拼图 {puzzleId}！当前进度：{collectedPuzzles}/{totalPuzzles}");
+                Debug.Log($"成功收集拼图 {puzzleId}！当前进度：{collectedPuzzles}/{totalPuzzles}");
                 
                 // 触发事件（供其他系统订阅）
                 OnPuzzleCollected?.Invoke(puzzleId);
@@ -338,6 +341,10 @@ public class GameManager : MonoBehaviour
                 // 检查胜利条件（可能会触发Victory或显示庆祝界面）
                 CheckVictoryCondition();
             }
+            else
+            {
+                Debug.LogWarning($"拼图 {puzzleId} 已经被收集过了，忽略重复收集");
+            }
         }
         else
         {
@@ -345,10 +352,13 @@ public class GameManager : MonoBehaviour
         }
     }
     
-    
     public bool IsPuzzleCollected(int puzzleId)
     {
-        return puzzleCollectionStatus.ContainsKey(puzzleId) && puzzleCollectionStatus[puzzleId];
+        if (!puzzleCollectionStatus.ContainsKey(puzzleId))
+        {
+            puzzleCollectionStatus[puzzleId] = false;
+        }
+        return puzzleCollectionStatus[puzzleId];
     }
     
     // ========== 公共接口 - 谜题系统 ==========
@@ -469,38 +479,37 @@ public class GameManager : MonoBehaviour
     // ========== 检查胜利条件 ==========
     void CheckVictoryCondition()
     {
-        Debug.LogWarning($"=== CheckVictoryCondition 被调用 ===");
-        Debug.LogWarning($"当前收集数量: {collectedPuzzles}, 总数量: {totalPuzzles}");
-        Debug.LogWarning($"条件检查: collectedPuzzles({collectedPuzzles}) >= totalPuzzles({totalPuzzles}) = {collectedPuzzles >= totalPuzzles}");
-        Debug.LogWarning($"Boss状态: {isBossDefeated}");
+        Debug.Log($"=== CheckVictoryCondition 被调用 ===");
+        Debug.Log($"当前收集数量: {collectedPuzzles}, 总数量: {totalPuzzles}");
+        Debug.Log($"条件检查: collectedPuzzles({collectedPuzzles}) >= totalPuzzles({totalPuzzles}) = {collectedPuzzles >= totalPuzzles}");
+        Debug.Log($"Boss状态: {isBossDefeated}");
         
         if (collectedPuzzles >= totalPuzzles && isBossDefeated)
         {
-            Debug.LogWarning("所有拼图已收集且Boss已击败，触发胜利！");
+            Debug.Log("所有拼图已收集且Boss已击败，触发胜利！");
             Victory();
         }
         else if (collectedPuzzles >= totalPuzzles)
         {
-            Debug.LogWarning($"🎉🎉🎉 所有拼图已收集（{collectedPuzzles}/{totalPuzzles}），但还需击败Boss！");
-            Debug.LogWarning("准备显示拼图收集完成庆祝界面");
+            Debug.Log($"🎉 所有拼图已收集（{collectedPuzzles}/{totalPuzzles}），但还需击败Boss！");
             
             // 显示拼图收集完成庆祝界面
             ShowPuzzleCompleteCelebration();
         }
         else if (isBossDefeated)
         {
-            Debug.LogWarning($"Boss已击败，但还需收集所有拼图！当前: {collectedPuzzles}/{totalPuzzles}");
+            Debug.Log($"Boss已击败，但还需收集所有拼图！当前: {collectedPuzzles}/{totalPuzzles}");
         }
         else
         {
-            Debug.LogWarning($"进度：{collectedPuzzles}/{totalPuzzles}，继续收集...");
+            Debug.Log($"进度：{collectedPuzzles}/{totalPuzzles}，继续收集...");
         }
     }
     
     // 显示拼图收集完成庆祝界面
     void ShowPuzzleCompleteCelebration()
     {
-        Debug.LogWarning($"GameManager: 显示拼图完成庆祝界面，当前收集: {collectedPuzzles}/{totalPuzzles}");
+        Debug.Log($"GameManager: 显示拼图完成庆祝界面，当前收集: {collectedPuzzles}/{totalPuzzles}");
         
         if (UIManager.Instance != null)
         {
