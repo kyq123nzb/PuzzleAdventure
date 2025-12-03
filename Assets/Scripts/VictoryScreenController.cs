@@ -25,8 +25,8 @@ public class VictoryScreenController : MonoBehaviour
     public float scaleSpeed = 2f;
     
     [Header("文本设置")]
-    public string victoryTitle = "恭喜通关！";
-    public string victoryMessage = "你成功收集了所有拼图！";
+    public string victoryTitle = "Congratulations! You Win!";
+    public string victoryMessage = "You collected all puzzles!";
     
     private CanvasGroup canvasGroup;
     private RectTransform panelRect;
@@ -93,7 +93,7 @@ public class VictoryScreenController : MonoBehaviour
         {
             int collected = GameManager.Instance.GetCollectedPuzzlesCount();  // 修复：使用正确的方法名
             int total = GameManager.Instance.TotalPuzzles;  // 修复：使用公共属性
-            completionStatsText.text = $"收集进度: {collected}/{total} 拼图";
+            completionStatsText.text = $"Progress: {collected}/{total} Puzzles";
         }
     }
     

@@ -989,7 +989,7 @@ public class UIManager : MonoBehaviour
         
         if (puzzleProgressText != null)
         {
-            string progressText = $"Collect Puzzles: {collected}/{total}";
+            string progressText = $"Collecting Puzzles: {collected}/{total}";
             
             // 尝试使用TextMeshPro（新版本）
             TMPro.TextMeshProUGUI tmpText = puzzleProgressText.GetComponent<TMPro.TextMeshProUGUI>();

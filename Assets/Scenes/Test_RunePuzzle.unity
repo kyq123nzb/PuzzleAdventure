@@ -154,7 +154,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 403c12db56885d14d9c17acf10b3e1ca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
   correctSequence: 123
   runes:
@@ -275,7 +275,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b537ab72eb2f9c43889deac8c07ccdb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
   runeID: 2
   puzzleController: {fileID: 21849661}
@@ -638,7 +638,7 @@ MonoBehaviour:
   interactableLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  defaultPromptText: "\u6309 E \u62FE\u53D6"
+  defaultPromptText: Press E to Interact
   interactKey: 101
 --- !u!1 &705090230
 GameObject:
@@ -1186,7 +1186,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b537ab72eb2f9c43889deac8c07ccdb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
   runeID: 1
   puzzleController: {fileID: 21849661}
@@ -1302,7 +1302,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b537ab72eb2f9c43889deac8c07ccdb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
   runeID: 3
   puzzleController: {fileID: 21849661}

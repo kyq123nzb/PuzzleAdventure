@@ -21,7 +21,7 @@ public class RuneChestPuzzle : Interactable
     void Start()
     {
         // 初始化状态
-        interactionText = "箱子被魔法锁住了... (需要按顺序激活符文)";
+        interactionText = "Chest is locked by magic... (Activate runes in order)";
     }
 
     // 重写交互逻辑：点击箱子本身时的反应
@@ -31,14 +31,14 @@ public class RuneChestPuzzle : Interactable
         {
             // 如果已解开，可能什么都不做，或者提示已打开
             if (UIManager.Instance != null)
-                UIManager.Instance.ShowInteractionPrompt("箱子已经打开了");
+                UIManager.Instance.ShowInteractionPrompt("Chest is already open");
         }
         else
         {
             // 如果没解开，显示提示
             base.Interact();
             if (UIManager.Instance != null)
-                UIManager.Instance.ShowInteractionPrompt("需要按正确的符文顺序才能打开！");
+                UIManager.Instance.ShowInteractionPrompt("Activate runes in the correct order to open!");
         }
     }
 
@@ -48,7 +48,7 @@ public class RuneChestPuzzle : Interactable
         if (isSolved) return;
 
         currentInput += rune.runeID;
-        Debug.Log($"当前输入序列: {currentInput}");
+        Debug.Log($"Current input sequence: {currentInput}");
 
         CheckSequence();
     }
@@ -68,7 +68,7 @@ public class RuneChestPuzzle : Interactable
         else
         {
             // 输入错误序列
-            Debug.Log("顺序错误！重置谜题。");
+            Debug.Log("Wrong sequence! Resetting puzzle.");
             StartCoroutine(ResetPuzzleDelay());
         }
     }
@@ -76,8 +76,8 @@ public class RuneChestPuzzle : Interactable
     IEnumerator SolvePuzzle()
     {
         isSolved = true;
-        interactionText = "箱子已打开";
-        Debug.Log("谜题解开！打开箱子...");
+        interactionText = "Chest opened";
+        Debug.Log("Puzzle solved! Opening chest...");
 
         // 播放开箱动画（旋转盖子）
         float timer = 0f;
@@ -96,7 +96,7 @@ public class RuneChestPuzzle : Interactable
         {
             // 在箱子上方稍微高一点的位置生成
             Instantiate(rewardItem, transform.position + Vector3.up * 1.5f, Quaternion.identity);
-            Debug.Log("生成奖励！");
+            Debug.Log("Reward spawned!");
         }
 
         // 既然解开了，符文就没必要再互动了，保持绿色常亮即可
