@@ -101,11 +101,7 @@ public class PlayerInteract : MonoBehaviour
         // 更新当前可交互物体
         currentInteractable = closestInteractable;
         
-        // 显示调试信息
-        if (currentInteractable != null)
-        {
-            Debug.Log($"发现可交互物体: {currentInteractable.gameObject.name} (距离: {closestDistance:F2})");
-        }
+        // 调试信息已移除（避免日志过多）
     }
     
     void TryInteract()
@@ -123,7 +119,7 @@ public class PlayerInteract : MonoBehaviour
         }
         else
         {
-            Debug.Log("范围内没有可交互物体");
+            // 调试日志已移除
         }
     }
     

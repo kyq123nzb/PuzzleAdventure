@@ -11,6 +11,12 @@ public class PuzzleItem : Interactable
     
     void Start()
     {
+        // 如果交互文本为空，设置默认文本
+        if (string.IsNullOrEmpty(interactionText))
+        {
+            interactionText = "按 E 拾取拼图";
+        }
+        
         // 检查是否已经收集过
         if (GameManager.Instance != null && 
             GameManager.Instance.IsPuzzleCollected(puzzleId))
@@ -32,14 +38,23 @@ public class PuzzleItem : Interactable
     
     void Collect()
     {
-        if (!canInteract) return;
+        if (!canInteract)
+        {
+            Debug.LogWarning($"拼图 {puzzleId} 无法交互 (canInteract = false)");
+            return;
+        }
         
-        Debug.Log($"拾取拼图 {puzzleId}");
+        Debug.LogWarning($"🎯 PuzzleItem: 拾取拼图 {puzzleId}");
         
         // 通知游戏管理器
         if (GameManager.Instance != null)
         {
+            Debug.LogWarning($"PuzzleItem: 调用 GameManager.Instance.CollectPuzzle({puzzleId})");
             GameManager.Instance.CollectPuzzle(puzzleId);
+        }
+        else
+        {
+            Debug.LogError($"❌ PuzzleItem: GameManager.Instance 为空！无法收集拼图 {puzzleId}");
         }
         
         // 播放效果
