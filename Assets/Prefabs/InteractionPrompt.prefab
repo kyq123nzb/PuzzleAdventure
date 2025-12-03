@@ -50,5 +50,5 @@ MonoBehaviour:
   interactableLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  defaultPromptText: "\u6309 E \u62FE\u53D6"
+  defaultPromptText: Press E to Interact
   interactKey: 101

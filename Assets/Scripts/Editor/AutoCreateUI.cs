@@ -171,7 +171,7 @@ public class AutoCreateUI : EditorWindow
         promptPanel.SetActive(false);
 
         // 创建提示文本
-        CreateText(promptPanel.transform, "InteractionPromptText", "按 E 拾取",
+        CreateText(promptPanel.transform, "InteractionPromptText", "Press E to Interact",
             Vector2.zero, 28, new Color(1f, 1f, 0.4f));
 
         Debug.Log("交互提示UI创建完成！");

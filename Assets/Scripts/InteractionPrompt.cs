@@ -17,7 +17,7 @@ public class InteractionPrompt : MonoBehaviour
     public LayerMask interactableLayerMask = -1; // 默认检测所有层，可以设置为 1 << 6 只检测第6层
     
     [Header("提示文本设置")]
-    public string defaultPromptText = "按 E 拾取";
+    public string defaultPromptText = "Press E to Interact";
     public KeyCode interactKey = KeyCode.E;
     
     private Camera playerCamera;

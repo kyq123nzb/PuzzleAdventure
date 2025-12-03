@@ -22,7 +22,7 @@ public class RuneStone : Interactable
         }
 
         // 设置基类的交互提示文本
-        interactionText = $"激活符文 [{runeID}]";
+        interactionText = $"Activate Rune [{runeID}]";
     }
 
     public override void Interact()
@@ -49,7 +49,7 @@ public class RuneStone : Interactable
         }
         else
         {
-            Debug.LogError("符文未绑定 Puzzle Controller！");
+            Debug.LogError("Rune not bound to Puzzle Controller!");
         }
     }
 
@@ -57,7 +57,7 @@ public class RuneStone : Interactable
     public void ResetRune()
     {
         canInteract = true;
-        interactionText = $"激活符文 [{runeID}]";
+        interactionText = $"Activate Rune [{runeID}]";
         if (myRenderer != null)
         {
             myRenderer.material.color = defaultColor;

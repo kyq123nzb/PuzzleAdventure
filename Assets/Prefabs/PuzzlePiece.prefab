@@ -111,7 +111,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75850006951964c4bb683a0c4648fe65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
   puzzleId: 4
   visualEffect: {fileID: 0}
@@ -128,7 +128,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d45d6cb728cd664bbbef5577a2d5a25, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
 --- !u!1 &3209950822328230334
 GameObject:
@@ -241,7 +241,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75850006951964c4bb683a0c4648fe65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
   puzzleId: 5
   visualEffect: {fileID: 0}
@@ -258,7 +258,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d45d6cb728cd664bbbef5577a2d5a25, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
 --- !u!1 &3209950822428193007
 GameObject:
@@ -371,7 +371,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75850006951964c4bb683a0c4648fe65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
   puzzleId: 8
   visualEffect: {fileID: 0}
@@ -388,7 +388,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d45d6cb728cd664bbbef5577a2d5a25, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
 --- !u!1 &3209950822603126570
 GameObject:
@@ -541,7 +541,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75850006951964c4bb683a0c4648fe65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
   puzzleId: 2
   visualEffect: {fileID: 0}
@@ -558,7 +558,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d45d6cb728cd664bbbef5577a2d5a25, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
 --- !u!1 &3209950823169219640
 GameObject:
@@ -671,7 +671,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75850006951964c4bb683a0c4648fe65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
   puzzleId: 7
   visualEffect: {fileID: 0}
@@ -688,7 +688,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d45d6cb728cd664bbbef5577a2d5a25, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
 --- !u!1 &3209950823418033402
 GameObject:
@@ -801,7 +801,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75850006951964c4bb683a0c4648fe65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
   puzzleId: 9
   visualEffect: {fileID: 0}
@@ -818,7 +818,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d45d6cb728cd664bbbef5577a2d5a25, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
 --- !u!1 &3209950823499338695
 GameObject:
@@ -931,7 +931,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75850006951964c4bb683a0c4648fe65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
   puzzleId: 1
   visualEffect: {fileID: 0}
@@ -948,7 +948,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d45d6cb728cd664bbbef5577a2d5a25, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
 --- !u!1 &3209950823522547640
 GameObject:
@@ -1061,7 +1061,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75850006951964c4bb683a0c4648fe65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
   puzzleId: 6
   visualEffect: {fileID: 0}
@@ -1078,7 +1078,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d45d6cb728cd664bbbef5577a2d5a25, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
 --- !u!1 &3209950823696458984
 GameObject:
@@ -1191,7 +1191,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75850006951964c4bb683a0c4648fe65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1
   puzzleId: 3
   visualEffect: {fileID: 0}
@@ -1208,5 +1208,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d45d6cb728cd664bbbef5577a2d5a25, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: "\u6309 E \u62FE\u53D6"
+  interactionText: Press E to Collect Puzzle
   canInteract: 1

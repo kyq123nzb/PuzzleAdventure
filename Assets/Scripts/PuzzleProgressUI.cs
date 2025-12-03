@@ -80,7 +80,7 @@ public class PuzzleProgressUI : MonoBehaviour
         // 更新文本（支持Text和TextMeshPro）
         if (progressText != null)
         {
-            string textContent = $"拼图收集: {collected}/{total}";
+            string textContent = $"Puzzles Collected: {collected}/{total}";
             
             // 尝试使用TextMeshPro（新版本）
             TMPro.TextMeshProUGUI tmpText = progressText.GetComponent<TMPro.TextMeshProUGUI>();

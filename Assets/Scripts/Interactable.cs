@@ -5,7 +5,7 @@ using UnityEngine;
 public class Interactable : MonoBehaviour
 {
     [Header("交互设置")]
-    public string interactionText = "按 E 拾取";
+    public string interactionText = "Press E to Interact";
     public bool canInteract = true;
     
     public virtual void Interact()
