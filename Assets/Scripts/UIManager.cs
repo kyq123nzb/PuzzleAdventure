@@ -48,7 +48,13 @@ public class UIManager : MonoBehaviour
     
     [Header("设置")]
     public bool lockCursorOnStart = false;
-    
+
+    [Header("拼图可视化 UI")]
+    public GameObject puzzlePanel;        // 九宫格父对象
+    public Image[] puzzleSlots = new Image[9];  // 存放 Slot_1 ~ Slot_9 的 Image
+    public Sprite placeholderSprite;      // 未收集图
+    public Sprite[] puzzleSprites;        // 已收集图（长度9，对应ID 1=索引0）
+
     private bool isPaused = false;
     private bool isGameStarted = false;
     
@@ -117,6 +123,7 @@ public class UIManager : MonoBehaviour
     void OnDisable()
     {
         // 取消订阅事件，避免内存泄漏
+        GameManager.OnPuzzleCollected -= UpdatePuzzleVisual;
         UnsubscribeFromGameManagerEvents();
     }
     
@@ -124,6 +131,7 @@ public class UIManager : MonoBehaviour
     {
         // 订阅拼图收集事件，实时更新进度
         GameManager.OnPuzzleCollected += OnPuzzleCollected;
+        GameManager.OnPuzzleCollected += UpdatePuzzleVisual;
         Debug.Log("UIManager: 已订阅GameManager.OnPuzzleCollected事件");
     }
     
@@ -1253,6 +1261,67 @@ public class UIManager : MonoBehaviour
             puzzleCompletePanel.SetActive(false);
         }
     }
+
+    private void UpdatePuzzleVisual(int puzzleId)
+    {
+        if (puzzleSlots == null || puzzleSlots.Length < puzzleId)
+        {
+            Debug.LogWarning("Puzzle slot array 未正确设置！");
+            return;
+        }
+
+        int index = puzzleId - 1; // puzzleId 从 1 开始，数组从 0 开始
+
+        // 找对应slot
+        Image slot = puzzleSlots[index];
+
+        if (slot == null)
+        {
+            Debug.LogWarning($"Puzzle Slot {puzzleId} 没有设置 Image！");
+            return;
+        }
+
+        // 设置拼图图片（Inspector 中定义）
+        if (puzzleSprites != null && puzzleSprites.Length > index)
+        {
+            slot.sprite = puzzleSprites[index];
+        }
+        else
+        {
+            Debug.LogWarning("PuzzleSprites 未设置，无法显示拼图图片！");
+            return;
+        }
+
+        // 可选：播放一个闪烁动画
+        StartCoroutine(PuzzleFlash(slot.transform));
+    }
+
+    private IEnumerator PuzzleFlash(Transform t)
+    {
+        Vector3 originalScale = t.localScale;
+        Vector3 bigScale = originalScale * 1.2f;
+
+        float time = 0f;
+        float duration = 0.15f;
+
+        while (time < duration)
+        {
+            t.localScale = Vector3.Lerp(originalScale, bigScale, time / duration);
+            time += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        time = 0f;
+        while (time < duration)
+        {
+            t.localScale = Vector3.Lerp(bigScale, originalScale, time / duration);
+            time += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        t.localScale = originalScale;
+    }
+
     
 }
 
