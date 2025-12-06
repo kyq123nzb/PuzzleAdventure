@@ -259,6 +259,11 @@ public class UIManager : MonoBehaviour
         if (victoryPanel != null) victoryPanel.SetActive(false);
         if (interactionPromptPanel != null) interactionPromptPanel.SetActive(false);
         if (puzzleCompletePanel != null) puzzleCompletePanel.SetActive(false);
+        
+        // 隐藏游戏内的UI元素（在主菜单时不应该显示）
+        if (puzzleProgressText != null) puzzleProgressText.SetActive(false);
+        if (hudPauseButton != null) hudPauseButton.SetActive(false);
+        if (hudResumeButton != null) hudResumeButton.SetActive(false);
     }
     
     // 禁用按钮的键盘导航，只能通过鼠标点击
@@ -491,6 +496,11 @@ public class UIManager : MonoBehaviour
         if (gameHUD != null) gameHUD.SetActive(false);
         if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
         if (victoryPanel != null) victoryPanel.SetActive(false);
+        
+        // 确保游戏内的UI元素在主菜单时隐藏
+        if (puzzleProgressText != null) puzzleProgressText.SetActive(false);
+        if (hudPauseButton != null) hudPauseButton.SetActive(false);
+        if (hudResumeButton != null) hudResumeButton.SetActive(false);
     }
     
     // 测试方法：验证按钮点击是否工作
@@ -871,6 +881,28 @@ public class UIManager : MonoBehaviour
             Debug.LogWarning("⚠️ UIManager: GameManager.Instance为空，跳过GameManager调用");
             // 即使没有GameManager，也初始化进度显示
             InitializeProgress();
+        }
+        
+        // 显示进度文本（Collecting Puzzles）- 必须在游戏开始后显示
+        if (puzzleProgressText != null)
+        {
+            puzzleProgressText.SetActive(true);
+            Debug.Log("✅ UIManager: 已显示进度文本 (Collecting Puzzles)");
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ UIManager: puzzleProgressText为空，尝试自动查找...");
+            // 尝试自动查找
+            puzzleProgressText = GameObject.Find("ProgressText");
+            if (puzzleProgressText == null)
+            {
+                puzzleProgressText = GameObject.Find("PuzzleProgressText");
+            }
+            if (puzzleProgressText != null)
+            {
+                puzzleProgressText.SetActive(true);
+                Debug.Log("✅ UIManager: 自动找到并显示进度文本");
+            }
         }
         
     }
