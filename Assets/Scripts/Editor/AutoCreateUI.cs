@@ -81,6 +81,11 @@ public class AutoCreateUI : EditorWindow
         GameObject quitButton = CreateButton(mainMenuCanvas.transform, "QuitButton", "退出游戏",
             new Vector2(0, -50), new Vector2(300, 60));
         quitButton.transform.SetParent(mainMenuPanel.transform, false);
+        
+        // 创建声音控制按钮
+        GameObject soundButton = CreateButton(mainMenuCanvas.transform, "SoundButton", "🔊 声音: 开",
+            new Vector2(0, -130), new Vector2(300, 60));
+        soundButton.transform.SetParent(mainMenuPanel.transform, false);
 
         Debug.Log("主菜单UI创建完成！");
     }

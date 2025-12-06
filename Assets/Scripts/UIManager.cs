@@ -16,6 +16,7 @@ public class UIManager : MonoBehaviour
     public GameObject mainMenuPanel;
     public GameObject startButton; // 支持GameObject，自动获取Button组件
     public GameObject quitButton; // 支持GameObject，自动获取Button组件
+    public GameObject soundButton; // 声音播放/暂停按钮
     
     [Header("游戏内UI")]
     public GameObject gameHUD;
@@ -84,6 +85,29 @@ public class UIManager : MonoBehaviour
         SetupButtonListeners();
         SubscribeToGameManagerEvents();
         InitializeProgress();
+        
+        // 初始化音频管理器（如果不存在）
+        InitializeAudioManager();
+    }
+    
+    // 初始化音频管理器
+    void InitializeAudioManager()
+    {
+        if (AudioManager.Instance == null)
+        {
+            GameObject audioManagerObj = new GameObject("AudioManager");
+            AudioManager audioManager = audioManagerObj.AddComponent<AudioManager>();
+            
+            // 注意：bgmClip需要在Unity编辑器的Inspector中手动设置
+            Debug.Log("✅ AudioManager已自动创建");
+            Debug.Log("提示：请在Unity编辑器的Inspector中设置AudioManager的bgmClip（Assets/Audio/bgm.wav）");
+        }
+        
+        // 更新声音按钮状态
+        if (soundButton != null)
+        {
+            UpdateSoundButtonText();
+        }
     }
     
     void CheckUIInfrastructure()
@@ -336,6 +360,30 @@ public class UIManager : MonoBehaviour
         {
             SetupButton(quitButton, QuitGame, "QuitButton");
             Debug.Log("✅ UIManager: QuitButton已连接");
+        }
+        
+        // 设置SoundButton（声音控制按钮）
+        if (soundButton == null)
+        {
+            soundButton = GameObject.Find("SoundButton");
+            if (soundButton == null)
+            {
+                soundButton = GameObject.Find("MusicButton");
+            }
+            if (soundButton == null)
+            {
+                soundButton = GameObject.Find("AudioButton");
+            }
+        }
+        if (soundButton != null)
+        {
+            SetupButton(soundButton, ToggleSound, "SoundButton");
+            Debug.Log("✅ UIManager: SoundButton已连接");
+            UpdateSoundButtonText();
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ UIManager: SoundButton未找到，如需声音控制功能请在场景中创建SoundButton");
         }
         
         // 暂停菜单按钮（ESC弹出的那个菜单）
@@ -972,6 +1020,45 @@ public class UIManager : MonoBehaviour
             #else
                 Application.Quit();
             #endif
+        }
+    }
+    
+    // 切换声音播放/暂停
+    public void ToggleSound()
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.ToggleBGM();
+            UpdateSoundButtonText();
+            Debug.Log($"声音状态: {(AudioManager.Instance.IsPlaying() ? "播放中" : "已暂停")}");
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ AudioManager.Instance为空，无法控制声音！请确保场景中有AudioManager对象");
+        }
+    }
+    
+    // 更新声音按钮的文本显示
+    void UpdateSoundButtonText()
+    {
+        if (soundButton == null) return;
+        
+        // 按钮文本保持为 "Music"，不随播放状态改变
+        string buttonText = "Music";
+        
+        // 尝试更新按钮文本（支持Text和TextMeshPro）
+        TMPro.TextMeshProUGUI tmpText = soundButton.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+        if (tmpText != null)
+        {
+            tmpText.text = buttonText;
+        }
+        else
+        {
+            Text textComponent = soundButton.GetComponentInChildren<Text>();
+            if (textComponent != null)
+            {
+                textComponent.text = buttonText;
+            }
         }
     }
     
