@@ -24,6 +24,7 @@ public class UIManager : MonoBehaviour
     // public Image puzzleProgressFill; // 已移除，只使用文本显示进度
     public GameObject interactionPromptPanel;
     public GameObject interactionPromptText; // 支持Text和TextMeshPro
+    public GameObject tutorialPanel; // 游戏教程面板（显示操作提示）
     
     [Header("暂停菜单UI")]
     public GameObject pauseMenuPanel;
@@ -259,6 +260,7 @@ public class UIManager : MonoBehaviour
         if (victoryPanel != null) victoryPanel.SetActive(false);
         if (interactionPromptPanel != null) interactionPromptPanel.SetActive(false);
         if (puzzleCompletePanel != null) puzzleCompletePanel.SetActive(false);
+        if (tutorialPanel != null) tutorialPanel.SetActive(false);
         
         // 隐藏游戏内的UI元素（在主菜单时不应该显示）
         if (puzzleProgressText != null) puzzleProgressText.SetActive(false);
@@ -482,6 +484,32 @@ public class UIManager : MonoBehaviour
         {
             SetupButton(victoryQuitButton, QuitGame, "VictoryQuitButton");
             Debug.Log("✅ UIManager: VictoryQuitButton已连接");
+        }
+        
+        // 教程面板关闭按钮
+        if (tutorialPanel != null)
+        {
+            Transform closeButton = tutorialPanel.transform.Find("CloseButton");
+            if (closeButton != null)
+            {
+                SetupButton(closeButton.gameObject, CloseTutorial, "TutorialCloseButton");
+                Debug.Log("✅ UIManager: TutorialCloseButton已连接");
+            }
+        }
+        else
+        {
+            // 尝试自动查找教程面板
+            GameObject foundPanel = GameObject.Find("TutorialPanel");
+            if (foundPanel != null)
+            {
+                tutorialPanel = foundPanel;
+                Transform closeButton = tutorialPanel.transform.Find("CloseButton");
+                if (closeButton != null)
+                {
+                    SetupButton(closeButton.gameObject, CloseTutorial, "TutorialCloseButton");
+                    Debug.Log("✅ UIManager: TutorialCloseButton已连接（自动查找）");
+                }
+            }
         }
     }
     
@@ -905,6 +933,9 @@ public class UIManager : MonoBehaviour
             }
         }
         
+        // 显示教程面板
+        ShowTutorial();
+        
     }
     
     public void TogglePause()
@@ -1150,6 +1181,30 @@ public class UIManager : MonoBehaviour
     
     public void ShowInteractionPrompt(string text)
     {
+        // 如果字段为空，尝试自动查找
+        if (interactionPromptPanel == null)
+        {
+            interactionPromptPanel = GameObject.Find("InteractionPromptPanel");
+            if (interactionPromptPanel == null)
+            {
+                // 尝试在GameHUD下查找
+                GameObject gameHUD = GameObject.Find("GameHUD");
+                if (gameHUD != null)
+                {
+                    Transform panelTransform = gameHUD.transform.Find("InteractionPromptPanel");
+                    if (panelTransform != null)
+                    {
+                        interactionPromptPanel = panelTransform.gameObject;
+                    }
+                }
+            }
+        }
+        
+        if (interactionPromptText == null && interactionPromptPanel != null)
+        {
+            interactionPromptText = interactionPromptPanel.transform.Find("InteractionPromptText")?.gameObject;
+        }
+        
         // 添加调试信息
         Debug.Log($"UIManager.ShowInteractionPrompt 被调用，文本: {text}");
         Debug.Log($"interactionPromptPanel 是否为null: {interactionPromptPanel == null}");
@@ -1441,6 +1496,57 @@ public class UIManager : MonoBehaviour
         t.localScale = originalScale;
     }
 
+    // ========== 教程面板相关方法 ==========
+    public void ShowTutorial()
+    {
+        if (tutorialPanel == null)
+        {
+            // 尝试自动查找
+            tutorialPanel = GameObject.Find("TutorialPanel");
+            if (tutorialPanel == null)
+            {
+                Debug.LogWarning("⚠️ UIManager: tutorialPanel为空，尝试自动查找失败");
+                return;
+            }
+        }
+        
+        if (tutorialPanel != null)
+        {
+            tutorialPanel.SetActive(true);
+            Debug.Log("✅ UIManager: 已显示教程面板");
+            
+            // 确保关闭按钮已连接
+            Transform closeButton = tutorialPanel.transform.Find("CloseButton");
+            if (closeButton != null)
+            {
+                Button btn = closeButton.GetComponent<Button>();
+                if (btn != null)
+                {
+                    btn.onClick.RemoveAllListeners();
+                    btn.onClick.AddListener(CloseTutorial);
+                }
+            }
+        }
+    }
+    
+    public void CloseTutorial()
+    {
+        if (tutorialPanel != null)
+        {
+            tutorialPanel.SetActive(false);
+            Debug.Log("✅ UIManager: 已关闭教程面板");
+        }
+        else
+        {
+            // 尝试自动查找
+            GameObject foundPanel = GameObject.Find("TutorialPanel");
+            if (foundPanel != null)
+            {
+                foundPanel.SetActive(false);
+                Debug.Log("✅ UIManager: 已关闭教程面板（自动查找）");
+            }
+        }
+    }
     
 }
 

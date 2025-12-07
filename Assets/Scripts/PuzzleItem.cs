@@ -14,7 +14,7 @@ public class PuzzleItem : Interactable
         // 如果交互文本为空，设置默认文本
         if (string.IsNullOrEmpty(interactionText))
         {
-            interactionText = "Press E to Collect Puzzle";
+            interactionText = "Press E To Collect";
         }
         
         // 检查是否已经收集过
