@@ -200,6 +200,17 @@ public class GameManager : MonoBehaviour
                 StopGameTimer();
                 SaveBestTime();
                 UpdateUIVisibility();
+                // 通知UIManager显示胜利面板
+                Debug.Log("🎉 GameManager: 游戏状态变为Victory，准备显示胜利面板");
+                if (UIManager.Instance != null)
+                {
+                    Debug.Log("✅ GameManager: UIManager.Instance存在，调用ShowVictory()");
+                    UIManager.Instance.ShowVictory();
+                }
+                else
+                {
+                    Debug.LogError("❌ GameManager: UIManager.Instance为空！无法显示胜利面板！");
+                }
                 break;
                 
             case GameState.GameOver:
@@ -262,9 +273,17 @@ public class GameManager : MonoBehaviour
     
     public void RestartGame()
     {
+        Debug.Log("🔄 GameManager: RestartGame 被调用，重置所有游戏数据并重新加载场景");
+        
+        // 重置所有游戏数据
         ResetGameData();
+        
+        // 重新加载当前场景（场景加载后会自动初始化）
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-        SetGameState(GameState.Playing);
+        
+        // 注意：SetGameState 会在场景加载完成后通过 OnSceneLoaded 调用
+        // 这里先设置为 Loading 状态，场景加载完成后会自动变为 Playing
+        SetGameState(GameState.Loading);
     }
     
     public void QuitGame()
@@ -484,17 +503,11 @@ public class GameManager : MonoBehaviour
         Debug.Log($"条件检查: collectedPuzzles({collectedPuzzles}) >= totalPuzzles({totalPuzzles}) = {collectedPuzzles >= totalPuzzles}");
         Debug.Log($"Boss状态: {isBossDefeated}");
         
-        if (collectedPuzzles >= totalPuzzles && isBossDefeated)
+        // 收集完所有拼图后直接显示胜利面板
+        if (collectedPuzzles >= totalPuzzles)
         {
-            Debug.Log("所有拼图已收集且Boss已击败，触发胜利！");
+            Debug.Log($"🎉 所有拼图已收集（{collectedPuzzles}/{totalPuzzles}），触发胜利！");
             Victory();
-        }
-        else if (collectedPuzzles >= totalPuzzles)
-        {
-            Debug.Log($"🎉 所有拼图已收集（{collectedPuzzles}/{totalPuzzles}），但还需击败Boss！");
-            
-            // 显示拼图收集完成庆祝界面
-            ShowPuzzleCompleteCelebration();
         }
         else if (isBossDefeated)
         {
@@ -586,6 +599,12 @@ public class GameManager : MonoBehaviour
         Debug.Log("游戏数据已重置");
     }
     
+    // 公共方法：重置游戏数据（供外部调用）
+    public void ResetGameDataPublic()
+    {
+        ResetGameData();
+    }
+    
     void SaveBestTime()
     {
         if (gameTime < bestTime)
@@ -654,7 +673,29 @@ public class GameManager : MonoBehaviour
         InitializeUIReferences();
         
         if (currentState == GameState.Loading)
+        {
             SetGameState(GameState.Playing);
+            
+            // 如果UIManager存在，延迟一帧后自动开始游戏（不显示主菜单）
+            if (UIManager.Instance != null)
+            {
+                StartCoroutine(DelayedStartGame());
+            }
+        }
+    }
+    
+    // 延迟开始游戏（确保场景完全加载）
+    System.Collections.IEnumerator DelayedStartGame()
+    {
+        yield return null; // 等待一帧，确保所有Start方法都执行完毕
+        
+        // 如果UIManager存在且游戏状态是Playing，自动开始游戏
+        if (UIManager.Instance != null && currentState == GameState.Playing)
+        {
+            Debug.Log("🔄 GameManager: 场景加载完成，自动开始游戏（RestartGame后）");
+            // 直接调用UIManager的StartGame方法，但跳过主菜单显示
+            UIManager.Instance.StartGameFromRestart();
+        }
     }
     
     void OnEnable()

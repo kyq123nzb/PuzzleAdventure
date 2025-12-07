@@ -82,13 +82,125 @@ public class UIManager : MonoBehaviour
         // 检查EventSystem和Canvas配置
         CheckUIInfrastructure();
         
-        ShowMainMenu();
+        // 检查是否是从RestartGame来的（通过检查游戏状态）
+        bool shouldShowMainMenu = true;
+        if (GameManager.Instance != null)
+        {
+            GameManager.GameState currentState = GameManager.Instance.GetCurrentGameState();
+            // 如果游戏状态是Playing或Loading，说明是重新开始，不显示主菜单
+            if (currentState == GameManager.GameState.Playing || currentState == GameManager.GameState.Loading)
+            {
+                shouldShowMainMenu = false;
+                Debug.Log("🔄 UIManager: 检测到重新开始，跳过主菜单显示，直接开始游戏");
+                // 延迟一帧后开始游戏，确保所有组件都已初始化
+                StartCoroutine(DelayedStartFromRestart());
+            }
+        }
+        
+        if (shouldShowMainMenu)
+        {
+            ShowMainMenu();
+        }
+        
         SetupButtonListeners();
         SubscribeToGameManagerEvents();
         InitializeProgress();
         
         // 初始化音频管理器（如果不存在）
         InitializeAudioManager();
+    }
+    
+    // 延迟开始游戏（从RestartGame调用）
+    System.Collections.IEnumerator DelayedStartFromRestart()
+    {
+        yield return null; // 等待一帧，确保所有Start方法都执行完毕
+        
+        Debug.Log("🔄 UIManager: DelayedStartFromRestart 被调用，直接开始游戏（完全重新初始化）");
+        
+        // 隐藏主菜单和其他UI
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+        if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
+        if (victoryPanel != null) victoryPanel.SetActive(false);
+        if (puzzleCompletePanel != null) puzzleCompletePanel.SetActive(false);
+        
+        // 设置游戏状态
+        isGameStarted = true;
+        isPaused = false;
+        Time.timeScale = 1f;
+        
+        // 设置光标状态（与StartGame一致）
+        if (lockCursorOnStart)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+        
+        // 显示游戏内UI
+        if (gameHUD != null)
+        {
+            gameHUD.SetActive(true);
+        }
+        
+        // 确保GameHUDCanvas已激活
+        GameObject gameHUDCanvas = GameObject.Find("GameHUDCanvas");
+        if (gameHUDCanvas == null)
+        {
+            Canvas[] canvases = FindObjectsOfType<Canvas>(true);
+            foreach (Canvas canvas in canvases)
+            {
+                if (canvas.name == "GameHUDCanvas")
+                {
+                    gameHUDCanvas = canvas.gameObject;
+                    break;
+                }
+            }
+        }
+        if (gameHUDCanvas != null && !gameHUDCanvas.activeSelf)
+        {
+            gameHUDCanvas.SetActive(true);
+        }
+        
+        // 重新查找按钮（场景重新加载后需要重新查找）
+        SetupButtonListeners();
+        
+        // 显示HUD按钮
+        if (hudPauseButton != null)
+        {
+            hudPauseButton.SetActive(true);
+            Button pauseBtn = hudPauseButton.GetComponent<Button>();
+            if (pauseBtn != null) pauseBtn.interactable = true;
+        }
+        if (hudResumeButton != null)
+        {
+            hudResumeButton.SetActive(true);
+            Button resumeBtn = hudResumeButton.GetComponent<Button>();
+            if (resumeBtn != null) resumeBtn.interactable = false;
+        }
+        
+        // 显示进度文本
+        if (puzzleProgressText != null)
+        {
+            puzzleProgressText.SetActive(true);
+        }
+        
+        // 初始化进度显示（重置为0）
+        InitializeProgress();
+        
+        // 显示教程面板
+        ShowTutorial();
+        
+        Debug.Log("✅ UIManager: 游戏已完全重新开始（所有内容已初始化）");
+    }
+    
+    // 从GameManager调用，直接开始游戏（不显示主菜单）
+    public void StartGameFromRestart()
+    {
+        StartCoroutine(DelayedStartFromRestart());
     }
     
     // 初始化音频管理器
@@ -1029,18 +1141,422 @@ public class UIManager : MonoBehaviour
     
     public void ShowVictory()
     {
+        Debug.Log("🎉 UIManager.ShowVictory() 被调用！");
+        
         isGameStarted = false;
         Time.timeScale = 0f;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         
-        if (victoryPanel != null) victoryPanel.SetActive(true);
+        // 如果victoryPanel为空，尝试自动查找
+        if (victoryPanel == null)
+        {
+            Debug.LogWarning("⚠️ UIManager: victoryPanel为空，尝试自动查找...");
+            victoryPanel = GameObject.Find("VictoryPanel");
+            if (victoryPanel == null)
+            {
+                victoryPanel = GameObject.Find("Victory Panel");
+            }
+            if (victoryPanel == null)
+            {
+                // 尝试在所有Canvas下查找
+                Canvas[] canvases = FindObjectsOfType<Canvas>();
+                foreach (Canvas canvas in canvases)
+                {
+                    Transform victoryTransform = canvas.transform.Find("VictoryPanel");
+                    if (victoryTransform == null)
+                    {
+                        victoryTransform = canvas.transform.Find("Victory Panel");
+                    }
+                    if (victoryTransform != null)
+                    {
+                        victoryPanel = victoryTransform.gameObject;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // 隐藏其他UI
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
         if (gameHUD != null) gameHUD.SetActive(false);
+        if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
+        if (interactionPromptPanel != null) interactionPromptPanel.SetActive(false);
+        if (puzzleCompletePanel != null) puzzleCompletePanel.SetActive(false);
+        
+        // 显示胜利面板
+        if (victoryPanel != null)
+        {
+            Debug.Log($"✅ UIManager: 找到胜利面板 - {victoryPanel.name}");
+            
+            // 确保所有父对象都是激活的
+            Transform parent = victoryPanel.transform.parent;
+            while (parent != null)
+            {
+                if (!parent.gameObject.activeSelf)
+                {
+                    parent.gameObject.SetActive(true);
+                    Debug.Log($"✅ UIManager: 激活父对象 - {parent.name}");
+                }
+                parent = parent.parent;
+            }
+            
+            victoryPanel.SetActive(true);
+            
+            // 确保胜利面板是全屏的
+            Canvas canvas = victoryPanel.GetComponentInParent<Canvas>();
+            if (canvas != null)
+            {
+                Debug.Log($"✅ UIManager: 找到Canvas - {canvas.name}, RenderMode={canvas.renderMode}");
+                
+                // 确保Canvas覆盖整个屏幕
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 999; // 设置最高排序，确保在最上层
+                canvas.gameObject.SetActive(true);
+                
+                // 确保胜利面板的RectTransform覆盖整个屏幕
+                RectTransform panelRect = victoryPanel.GetComponent<RectTransform>();
+                if (panelRect != null)
+                {
+                    // 设置锚点为全屏
+                    panelRect.anchorMin = Vector2.zero;
+                    panelRect.anchorMax = Vector2.one;
+                    panelRect.sizeDelta = Vector2.zero;
+                    panelRect.anchoredPosition = Vector2.zero;
+                    
+                    Debug.Log($"✅ UIManager: 胜利面板RectTransform已设置为全屏");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ UIManager: 胜利面板没有找到Canvas！");
+            }
+            
+            Debug.Log($"✅ UIManager: 胜利面板已激活！ActiveInHierarchy={victoryPanel.activeInHierarchy}");
+            
+            // 统一胜利界面按钮样式与主菜单按钮一致（内部会调用SetupVictoryText）
+            SyncVictoryButtonStyles();
+        }
+        else
+        {
+            Debug.LogError("❌ UIManager: 无法找到VictoryPanel！请检查场景中是否有名为'VictoryPanel'的GameObject！");
+        }
+    }
+    
+    // 同步胜利界面按钮样式与主菜单按钮一致，并设置布局
+    void SyncVictoryButtonStyles()
+    {
+        // 设置胜利文本样式（很大且居中）
+        SetupVictoryText();
+        
+        // 获取参考按钮的样式信息
+        RectTransform startRect = startButton?.GetComponent<RectTransform>();
+        RectTransform quitRect = quitButton?.GetComponent<RectTransform>();
+        Image startImage = startButton?.GetComponent<Image>();
+        Image quitImage = quitButton?.GetComponent<Image>();
+        
+        // 设置 victoryRestartButton（参考 startButton 的样式）
+        if (victoryRestartButton != null && startRect != null)
+        {
+            RectTransform restartRect = victoryRestartButton.GetComponent<RectTransform>();
+            if (restartRect != null)
+            {
+                // 设置按钮大小（参考 startButton，确保能包裹文字）
+                restartRect.sizeDelta = startRect.sizeDelta;
+                restartRect.localScale = Vector3.one;
+                
+                // 设置按钮位置：水平居中，垂直位置在文本下方
+                restartRect.anchorMin = new Vector2(0.5f, 0.5f);
+                restartRect.anchorMax = new Vector2(0.5f, 0.5f);
+                restartRect.pivot = new Vector2(0.5f, 0.5f);
+                
+                // 计算位置：文本下方，参考 startButton 的垂直位置，但往下移动一些
+                float buttonY = startRect.anchoredPosition.y - 30f; // 往下移动30像素
+                restartRect.anchoredPosition = new Vector2(0, buttonY);
+                
+                Debug.Log($"✅ UIManager: VictoryRestartButton位置已设置: ({restartRect.anchoredPosition.x}, {restartRect.anchoredPosition.y})");
+            }
+            
+            // 复制颜色
+            Image restartImage = victoryRestartButton.GetComponent<Image>();
+            if (startImage != null && restartImage != null)
+            {
+                restartImage.color = startImage.color;
+            }
+            
+            // 复制文本样式
+            CopyButtonTextStyle(startButton, victoryRestartButton);
+            
+            // 确保按钮大小足够包裹文字
+            EnsureButtonFitsText(victoryRestartButton);
+        }
+        
+        // 设置 victoryQuitButton（参考 quitButton 的样式）
+        if (victoryQuitButton != null && quitRect != null)
+        {
+            RectTransform victoryQuitRect = victoryQuitButton.GetComponent<RectTransform>();
+            if (victoryQuitRect != null)
+            {
+                // 设置按钮大小：与 restartButton 一样大小
+                if (victoryRestartButton != null)
+                {
+                    RectTransform restartRect = victoryRestartButton.GetComponent<RectTransform>();
+                    if (restartRect != null)
+                    {
+                        victoryQuitRect.sizeDelta = restartRect.sizeDelta; // 使用 restartButton 的大小
+                    }
+                }
+                else
+                {
+                    victoryQuitRect.sizeDelta = quitRect.sizeDelta; // 如果没有 restartButton，使用 quitButton 的大小
+                }
+                victoryQuitRect.localScale = Vector3.one;
+                
+                // 设置按钮位置：水平居中，垂直位置在 restartButton 下方
+                victoryQuitRect.anchorMin = new Vector2(0.5f, 0.5f);
+                victoryQuitRect.anchorMax = new Vector2(0.5f, 0.5f);
+                victoryQuitRect.pivot = new Vector2(0.5f, 0.5f);
+                
+                // 计算位置：restartButton 下方，距离与 congratulations 到 restartButton 的距离相同
+                float buttonY = 0f;
+                if (victoryRestartButton != null)
+                {
+                    RectTransform restartRect = victoryRestartButton.GetComponent<RectTransform>();
+                    if (restartRect != null)
+                    {
+                        // 计算 congratulations 文本底部到 restartButton 顶部的距离
+                        float textToRestartDistance = 150f; // 默认间距
+                        
+                        if (victoryText != null)
+                        {
+                            RectTransform textRect = victoryText.GetComponent<RectTransform>();
+                            if (textRect != null)
+                            {
+                                // 文本中心Y坐标
+                                float textCenterY = textRect.anchoredPosition.y;
+                                
+                                // 计算文本高度
+                                float textHeight = 0f;
+                                TMPro.TextMeshProUGUI tmpText = victoryText.GetComponent<TMPro.TextMeshProUGUI>();
+                                if (tmpText != null)
+                                {
+                                    textHeight = tmpText.preferredHeight;
+                                }
+                                else
+                                {
+                                    Text textLegacy = victoryText.GetComponent<Text>();
+                                    if (textLegacy != null)
+                                    {
+                                        textHeight = textLegacy.preferredHeight;
+                                    }
+                                }
+                                
+                                // 文本底部 = 文本中心 - 文本高度/2
+                                float textBottom = textCenterY - textHeight / 2f;
+                                
+                                // restartButton 顶部 = restartButton 中心 + 按钮高度/2
+                                float restartTop = restartRect.anchoredPosition.y + restartRect.sizeDelta.y / 2f;
+                                
+                                // 计算距离
+                                textToRestartDistance = textBottom - restartTop;
+                            }
+                        }
+                        
+                        // quitButton 顶部应该在 restartButton 下方，距离相同
+                        // restartButton 底部 = restartButton 中心 - 按钮高度/2
+                        float restartBottom = restartRect.anchoredPosition.y - restartRect.sizeDelta.y / 2f;
+                        
+                        // quitButton 中心 = restartButton 底部 - 间距 - quitButton高度/2
+                        buttonY = restartBottom - textToRestartDistance - victoryQuitRect.sizeDelta.y / 2f;
+                    }
+                }
+                else
+                {
+                    // 如果没有 restartButton，使用 quitButton 的位置往下移动
+                    buttonY = quitRect.anchoredPosition.y - 30f;
+                }
+                victoryQuitRect.anchoredPosition = new Vector2(0, buttonY);
+                
+                Debug.Log($"✅ UIManager: VictoryQuitButton位置已设置: ({victoryQuitRect.anchoredPosition.x}, {victoryQuitRect.anchoredPosition.y})");
+            }
+            
+            // 复制颜色
+            Image victoryQuitImage = victoryQuitButton.GetComponent<Image>();
+            if (quitImage != null && victoryQuitImage != null)
+            {
+                victoryQuitImage.color = quitImage.color;
+            }
+            
+            // 复制文本样式
+            CopyButtonTextStyle(quitButton, victoryQuitButton);
+            
+            // 确保按钮大小足够包裹文字
+            EnsureButtonFitsText(victoryQuitButton);
+        }
+    }
+    
+    // 复制按钮文本样式
+    void CopyButtonTextStyle(GameObject sourceButton, GameObject targetButton)
+    {
+        if (sourceButton == null || targetButton == null) return;
+        
+        // 尝试 TextMeshPro
+        TMPro.TextMeshProUGUI sourceText = sourceButton.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+        TMPro.TextMeshProUGUI targetText = targetButton.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+        if (sourceText != null && targetText != null)
+        {
+            targetText.color = sourceText.color;
+            targetText.fontSize = sourceText.fontSize;
+            targetText.fontStyle = sourceText.fontStyle;
+        }
+        else
+        {
+            // 尝试传统 Text
+            Text sourceTextLegacy = sourceButton.GetComponentInChildren<Text>();
+            Text targetTextLegacy = targetButton.GetComponentInChildren<Text>();
+            if (sourceTextLegacy != null && targetTextLegacy != null)
+            {
+                targetTextLegacy.color = sourceTextLegacy.color;
+                targetTextLegacy.fontSize = sourceTextLegacy.fontSize;
+                targetTextLegacy.fontStyle = sourceTextLegacy.fontStyle;
+            }
+        }
+    }
+    
+    // 确保按钮大小足够包裹文字
+    void EnsureButtonFitsText(GameObject button)
+    {
+        if (button == null) return;
+        
+        TMPro.TextMeshProUGUI text = button.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+        if (text != null)
+        {
+            // 让文本自动调整大小以适应按钮
+            text.enableAutoSizing = false;
+            
+            // 计算文本所需的最小宽度
+            float textWidth = text.preferredWidth;
+            float textHeight = text.preferredHeight;
+            
+            RectTransform buttonRect = button.GetComponent<RectTransform>();
+            if (buttonRect != null)
+            {
+                // 确保按钮宽度至少是文本宽度的1.2倍，高度至少是文本高度的1.3倍
+                float minWidth = Mathf.Max(buttonRect.sizeDelta.x, textWidth * 1.2f);
+                float minHeight = Mathf.Max(buttonRect.sizeDelta.y, textHeight * 1.3f);
+                
+                buttonRect.sizeDelta = new Vector2(minWidth, minHeight);
+                
+                Debug.Log($"✅ UIManager: {button.name}大小已调整为({minWidth}, {minHeight})以包裹文字");
+            }
+        }
+        else
+        {
+            Text textLegacy = button.GetComponentInChildren<Text>();
+            if (textLegacy != null)
+            {
+                RectTransform buttonRect = button.GetComponent<RectTransform>();
+                if (buttonRect != null)
+                {
+                    // 对于传统Text，使用ContentSizeFitter或手动调整
+                    ContentSizeFitter fitter = button.GetComponent<ContentSizeFitter>();
+                    if (fitter == null)
+                    {
+                        fitter = button.AddComponent<ContentSizeFitter>();
+                    }
+                    fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+                    fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                    
+                    // 添加一些边距
+                    buttonRect.sizeDelta = new Vector2(
+                        Mathf.Max(buttonRect.sizeDelta.x, textLegacy.preferredWidth + 40),
+                        Mathf.Max(buttonRect.sizeDelta.y, textLegacy.preferredHeight + 20)
+                    );
+                }
+            }
+        }
+    }
+    
+    // 设置胜利文本样式（很大且居中）
+    void SetupVictoryText()
+    {
+        if (victoryText == null)
+        {
+            // 尝试自动查找
+            if (victoryPanel != null)
+            {
+                victoryText = victoryPanel.transform.Find("VictoryText")?.gameObject;
+                if (victoryText == null)
+                {
+                    victoryText = victoryPanel.transform.Find("Victory Text")?.gameObject;
+                }
+            }
+        }
+        
+        if (victoryText != null)
+        {
+            RectTransform textRect = victoryText.GetComponent<RectTransform>();
+            if (textRect != null)
+            {
+                // 设置完全居中（水平和垂直都居中）
+                textRect.anchorMin = new Vector2(0.5f, 0.5f);
+                textRect.anchorMax = new Vector2(0.5f, 0.5f);
+                textRect.pivot = new Vector2(0.5f, 0.5f);
+                
+                // 设置位置：屏幕上方，在按钮上方
+                float textY = 200f; // 距离中心上方200像素
+                if (startButton != null)
+                {
+                    RectTransform startRect = startButton.GetComponent<RectTransform>();
+                    if (startRect != null)
+                    {
+                        // 文本在 startButton 上方，间距约150像素
+                        textY = startRect.anchoredPosition.y + 150f;
+                    }
+                }
+                textRect.anchoredPosition = new Vector2(0, textY);
+                
+                Debug.Log($"✅ UIManager: VictoryText已设置为居中，位置: ({textRect.anchoredPosition.x}, {textRect.anchoredPosition.y})");
+            }
+            
+            // 设置更大的字体
+            TMPro.TextMeshProUGUI tmpText = victoryText.GetComponent<TMPro.TextMeshProUGUI>();
+            if (tmpText != null)
+            {
+                tmpText.fontSize = 96f; // 设置大字体
+                tmpText.alignment = TMPro.TextAlignmentOptions.Center;
+                tmpText.enableAutoSizing = false;
+                Debug.Log($"✅ UIManager: VictoryText字体大小已设置为{tmpText.fontSize}，已居中");
+            }
+            else
+            {
+                Text textLegacy = victoryText.GetComponent<Text>();
+                if (textLegacy != null)
+                {
+                    textLegacy.fontSize = 96;
+                    textLegacy.alignment = TextAnchor.MiddleCenter;
+                    Debug.Log($"✅ UIManager: VictoryText字体大小已设置为{textLegacy.fontSize}，已居中");
+                }
+            }
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ UIManager: 无法找到VictoryText！");
+        }
     }
     
     public void RestartGame()
     {
-        // 调用GameManager的RestartGame（如果存在）
+        Debug.Log("🔄 UIManager: RestartGame 被调用，准备重新开始游戏（完全重新加载场景，效果与StartGame相同）");
+        
+        // 隐藏胜利面板和其他UI
+        if (victoryPanel != null) victoryPanel.SetActive(false);
+        if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
+        if (puzzleCompletePanel != null) puzzleCompletePanel.SetActive(false);
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+        
+        // 调用GameManager的RestartGame，这会重新加载场景并重置所有数据
+        // 场景加载后，UIManager.Start()会检测到Loading状态，自动跳过主菜单直接开始游戏
         if (GameManager.Instance != null)
         {
             GameManager.Instance.RestartGame();
@@ -1048,7 +1564,6 @@ public class UIManager : MonoBehaviour
         else
         {
             // 如果没有GameManager，直接重新加载场景
-            Time.timeScale = 1f;
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
     }
@@ -1549,4 +2064,5 @@ public class UIManager : MonoBehaviour
     }
     
 }
+
 
