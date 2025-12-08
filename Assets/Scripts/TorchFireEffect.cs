@@ -106,8 +106,11 @@ public class TorchFireEffect : MonoBehaviour
             var velocity = fireParticles.velocityOverLifetime;
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.Local;
+            velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+            // 原来的 Y 轴设置
             velocity.y = new ParticleSystem.MinMaxCurve(2f, 4f);
-            
+
             var colorOverLifetime = fireParticles.colorOverLifetime;
             colorOverLifetime.enabled = true;
             Gradient gradient = new Gradient();
@@ -149,8 +152,10 @@ public class TorchFireEffect : MonoBehaviour
             var velocity = smokeParticles.velocityOverLifetime;
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.Local;
+            velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
             velocity.y = new ParticleSystem.MinMaxCurve(1f, 2f);
-            
+
             var colorOverLifetime = smokeParticles.colorOverLifetime;
             colorOverLifetime.enabled = true;
             Gradient gradient = new Gradient();
