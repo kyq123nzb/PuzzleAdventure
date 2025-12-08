@@ -20,7 +20,13 @@ public class PlayerController : MonoBehaviour
     
     [Header("摄像机引用")]
     [SerializeField] private Camera playerCamera; // 改为序列化字段，可以在 Inspector 中赋值
-    
+
+    [Header("推箱子设置")]
+    [Tooltip("推力的强度")]
+    public float pushPower = 2.0f;
+    [Tooltip("是否只允许推挂载了 PushableBox 脚本的物体")]
+    public bool requirePushableScript = true;
+
     private CharacterController controller;
     private Vector3 velocity;
     private float xRotation = 0f;
@@ -160,5 +166,34 @@ public class PlayerController : MonoBehaviour
             
             Debug.Log("已创建新的摄像机");
         }
+    }
+
+    // ==========推箱子核心逻辑 ==========
+    // 当 CharacterController 碰到任何 Collider 时会自动调用此方法
+    void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        // 1. 获取碰到的刚体
+        Rigidbody body = hit.collider.attachedRigidbody;
+
+        // 2. 如果没有刚体或者刚体是运动学的(不受力)，则退出
+        if (body == null || body.isKinematic) return;
+
+        // 3. (可选) 检查是否挂载了专用脚本
+        if (requirePushableScript)
+        {
+            // 如果碰到的物体没有 PushableBox 脚本，就不推
+            if (hit.collider.GetComponent<PushableBox>() == null) return;
+        }
+
+        // 4. 防止向下推（例如站在箱子上时不应该产生推力）
+        if (hit.moveDirection.y < -0.3f) return;
+
+        // 5. 计算推力方向 (只在水平面上推)
+        Vector3 pushDir = new Vector3(hit.moveDirection.x, 0, hit.moveDirection.z);
+
+        // 6. 施加力
+        // 使用 VelocityChange 模式，推起来手感更直接，不像在冰面上打滑
+        // 除以质量(body.mass)是为了让重的箱子更难推
+        body.velocity = pushDir * pushPower / Mathf.Max(body.mass, 1f);
     }
 }
