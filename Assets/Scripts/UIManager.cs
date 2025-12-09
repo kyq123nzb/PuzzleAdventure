@@ -43,6 +43,12 @@ public class UIManager : MonoBehaviour
     public GameObject victoryRestartButton; // 支持GameObject，自动获取Button组件
     public GameObject victoryQuitButton; // 支持GameObject，自动获取Button组件
     
+    [Header("失败界面UI")]
+    public GameObject defeatPanel; // 失败/游戏结束面板
+    public GameObject defeatText; // 支持Text和TextMeshPro
+    public GameObject defeatRestartButton; // 支持GameObject，自动获取Button组件
+    public GameObject defeatQuitButton; // 支持GameObject，自动获取Button组件
+    
     [Header("拼图完成庆祝界面")]
     public GameObject puzzleCompletePanel; // 拼图收集完成时的庆祝界面
     public GameObject puzzleCompleteText; // 支持Text和TextMeshPro
@@ -370,6 +376,7 @@ public class UIManager : MonoBehaviour
         if (gameHUD != null) gameHUD.SetActive(false);
         if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
         if (victoryPanel != null) victoryPanel.SetActive(false);
+        if (defeatPanel != null) defeatPanel.SetActive(false);
         if (interactionPromptPanel != null) interactionPromptPanel.SetActive(false);
         if (puzzleCompletePanel != null) puzzleCompletePanel.SetActive(false);
         if (tutorialPanel != null) tutorialPanel.SetActive(false);
@@ -479,6 +486,43 @@ public class UIManager : MonoBehaviour
         {
             SetupButton(quitButton, QuitGame, "QuitButton");
             Debug.Log("✅ UIManager: QuitButton已连接");
+        }
+        
+        // 设置失败界面按钮（如果存在）
+        if (defeatRestartButton == null && defeatPanel != null)
+        {
+            Transform restartButton = defeatPanel.transform.Find("DefeatRestartButton");
+            if (restartButton == null)
+            {
+                restartButton = defeatPanel.transform.Find("RestartButton");
+            }
+            if (restartButton != null)
+            {
+                defeatRestartButton = restartButton.gameObject;
+            }
+        }
+        if (defeatRestartButton != null)
+        {
+            SetupButton(defeatRestartButton, RestartGame, "DefeatRestartButton");
+            Debug.Log("✅ UIManager: DefeatRestartButton已连接");
+        }
+        
+        if (defeatQuitButton == null && defeatPanel != null)
+        {
+            Transform quitButton = defeatPanel.transform.Find("DefeatQuitButton");
+            if (quitButton == null)
+            {
+                quitButton = defeatPanel.transform.Find("QuitButton");
+            }
+            if (quitButton != null)
+            {
+                defeatQuitButton = quitButton.gameObject;
+            }
+        }
+        if (defeatQuitButton != null)
+        {
+            SetupButton(defeatQuitButton, QuitGame, "DefeatQuitButton");
+            Debug.Log("✅ UIManager: DefeatQuitButton已连接");
         }
         
         // 设置SoundButton（声音控制按钮）
@@ -1243,6 +1287,232 @@ public class UIManager : MonoBehaviour
         }
     }
     
+    public void ShowDefeat()
+    {
+        Debug.Log("💀 UIManager.ShowDefeat() 被调用！");
+        
+        isGameStarted = false;
+        Time.timeScale = 0f;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        
+        // 如果defeatPanel为空，尝试自动查找
+        if (defeatPanel == null)
+        {
+            Debug.LogWarning("⚠️ UIManager: defeatPanel为空，尝试自动查找...");
+            defeatPanel = GameObject.Find("DefeatPanel");
+            if (defeatPanel == null)
+            {
+                defeatPanel = GameObject.Find("Defeat Panel");
+            }
+            if (defeatPanel == null)
+            {
+                // 尝试在所有Canvas下查找
+                Canvas[] canvases = FindObjectsOfType<Canvas>();
+                foreach (Canvas canvas in canvases)
+                {
+                    Transform defeatTransform = canvas.transform.Find("DefeatPanel");
+                    if (defeatTransform == null)
+                    {
+                        defeatTransform = canvas.transform.Find("Defeat Panel");
+                    }
+                    if (defeatTransform != null)
+                    {
+                        defeatPanel = defeatTransform.gameObject;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // 隐藏其他UI
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+        if (gameHUD != null) gameHUD.SetActive(false);
+        if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
+        if (victoryPanel != null) victoryPanel.SetActive(false);
+        if (interactionPromptPanel != null) interactionPromptPanel.SetActive(false);
+        if (puzzleCompletePanel != null) puzzleCompletePanel.SetActive(false);
+        
+        // 显示失败面板
+        if (defeatPanel != null)
+        {
+            Debug.Log($"✅ UIManager: 找到失败面板 - {defeatPanel.name}");
+            
+            // 确保所有父对象都是激活的
+            Transform parent = defeatPanel.transform.parent;
+            while (parent != null)
+            {
+                if (!parent.gameObject.activeSelf)
+                {
+                    parent.gameObject.SetActive(true);
+                    Debug.Log($"✅ UIManager: 激活父对象 - {parent.name}");
+                }
+                parent = parent.parent;
+            }
+            
+            defeatPanel.SetActive(true);
+            
+            // 确保失败面板是全屏的
+            Canvas canvas = defeatPanel.GetComponentInParent<Canvas>();
+            if (canvas != null)
+            {
+                Debug.Log($"✅ UIManager: 找到Canvas - {canvas.name}, RenderMode={canvas.renderMode}");
+                
+                // 确保Canvas覆盖整个屏幕
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 999; // 设置最高排序，确保在最上层
+                canvas.gameObject.SetActive(true);
+                
+                // 确保失败面板的RectTransform覆盖整个屏幕
+                RectTransform panelRect = defeatPanel.GetComponent<RectTransform>();
+                if (panelRect != null)
+                {
+                    // 设置锚点为全屏
+                    panelRect.anchorMin = Vector2.zero;
+                    panelRect.anchorMax = Vector2.one;
+                    panelRect.sizeDelta = Vector2.zero;
+                    panelRect.anchoredPosition = Vector2.zero;
+                    
+                    Debug.Log($"✅ UIManager: 失败面板RectTransform已设置为全屏");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ UIManager: 失败面板没有找到Canvas！");
+            }
+            
+            // 设置失败文本
+            SetupDefeatText();
+            
+            // 设置失败界面按钮
+            SetupDefeatButtons();
+            
+            Debug.Log($"✅ UIManager: 失败面板已激活！ActiveInHierarchy={defeatPanel.activeInHierarchy}");
+        }
+        else
+        {
+            Debug.LogError("❌ UIManager: 无法找到DefeatPanel！请检查场景中是否有名为'DefeatPanel'的GameObject！");
+        }
+    }
+    
+    // 设置失败文本样式
+    void SetupDefeatText()
+    {
+        if (defeatText == null)
+        {
+            // 尝试自动查找
+            if (defeatPanel != null)
+            {
+                defeatText = defeatPanel.transform.Find("DefeatText")?.gameObject;
+                if (defeatText == null)
+                {
+                    defeatText = defeatPanel.transform.Find("Defeat Text")?.gameObject;
+                }
+            }
+        }
+        
+        if (defeatText != null)
+        {
+            RectTransform textRect = defeatText.GetComponent<RectTransform>();
+            if (textRect != null)
+            {
+                // 设置完全居中（水平和垂直都居中）
+                textRect.anchorMin = new Vector2(0.5f, 0.5f);
+                textRect.anchorMax = new Vector2(0.5f, 0.5f);
+                textRect.pivot = new Vector2(0.5f, 0.5f);
+                
+                // 设置位置：屏幕上方
+                float textY = 200f; // 距离中心上方200像素
+                if (startButton != null)
+                {
+                    RectTransform startRect = startButton.GetComponent<RectTransform>();
+                    if (startRect != null)
+                    {
+                        // 文本在 startButton 上方，间距约150像素
+                        textY = startRect.anchoredPosition.y + 150f;
+                    }
+                }
+                textRect.anchoredPosition = new Vector2(0, textY);
+                
+                Debug.Log($"✅ UIManager: DefeatText已设置为居中，位置: ({textRect.anchoredPosition.x}, {textRect.anchoredPosition.y})");
+            }
+            
+            // 设置文本内容为 "Defeat"
+            TMPro.TextMeshProUGUI tmpText = defeatText.GetComponent<TMPro.TextMeshProUGUI>();
+            if (tmpText != null)
+            {
+                tmpText.text = "Defeat";
+                tmpText.fontSize = 96f; // 设置大字体
+                tmpText.alignment = TMPro.TextAlignmentOptions.Center;
+                tmpText.enableAutoSizing = false;
+                Debug.Log($"✅ UIManager: DefeatText字体大小已设置为{tmpText.fontSize}，已居中");
+            }
+            else
+            {
+                Text textLegacy = defeatText.GetComponent<Text>();
+                if (textLegacy != null)
+                {
+                    textLegacy.text = "Defeat";
+                    textLegacy.fontSize = 96;
+                    textLegacy.alignment = TextAnchor.MiddleCenter;
+                    Debug.Log($"✅ UIManager: DefeatText字体大小已设置为{textLegacy.fontSize}，已居中");
+                }
+            }
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ UIManager: 无法找到DefeatText！");
+        }
+    }
+    
+    // 设置失败界面按钮
+    void SetupDefeatButtons()
+    {
+        // 设置 defeatRestartButton
+        if (defeatRestartButton == null)
+        {
+            if (defeatPanel != null)
+            {
+                Transform restartButton = defeatPanel.transform.Find("DefeatRestartButton");
+                if (restartButton == null)
+                {
+                    restartButton = defeatPanel.transform.Find("RestartButton");
+                }
+                if (restartButton != null)
+                {
+                    defeatRestartButton = restartButton.gameObject;
+                }
+            }
+        }
+        if (defeatRestartButton != null)
+        {
+            SetupButton(defeatRestartButton, RestartGame, "DefeatRestartButton");
+            Debug.Log("✅ UIManager: DefeatRestartButton已连接");
+        }
+        
+        // 设置 defeatQuitButton
+        if (defeatQuitButton == null)
+        {
+            if (defeatPanel != null)
+            {
+                Transform quitButton = defeatPanel.transform.Find("DefeatQuitButton");
+                if (quitButton == null)
+                {
+                    quitButton = defeatPanel.transform.Find("QuitButton");
+                }
+                if (quitButton != null)
+                {
+                    defeatQuitButton = quitButton.gameObject;
+                }
+            }
+        }
+        if (defeatQuitButton != null)
+        {
+            SetupButton(defeatQuitButton, QuitGame, "DefeatQuitButton");
+            Debug.Log("✅ UIManager: DefeatQuitButton已连接");
+        }
+    }
+    
     // 同步胜利界面按钮样式与主菜单按钮一致，并设置布局
     void SyncVictoryButtonStyles()
     {
@@ -1549,14 +1819,21 @@ public class UIManager : MonoBehaviour
     {
         Debug.Log("🔄 UIManager: RestartGame 被调用，准备重新开始游戏（完全重新加载场景，效果与StartGame相同）");
         
-        // 隐藏胜利面板和其他UI
+        // 隐藏所有UI面板
         if (victoryPanel != null) victoryPanel.SetActive(false);
+        if (defeatPanel != null) defeatPanel.SetActive(false);
         if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
         if (puzzleCompletePanel != null) puzzleCompletePanel.SetActive(false);
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
         
+        // 重置游戏状态
+        isGameStarted = false;
+        isPaused = false;
+        Time.timeScale = 1f;
+        
         // 调用GameManager的RestartGame，这会重新加载场景并重置所有数据
         // 场景加载后，UIManager.Start()会检测到Loading状态，自动跳过主菜单直接开始游戏
+        // 效果与StartGame完全相同
         if (GameManager.Instance != null)
         {
             GameManager.Instance.RestartGame();

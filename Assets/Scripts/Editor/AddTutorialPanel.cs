@@ -148,7 +148,8 @@ public class AddTutorialPanel
 
         TMPro.TextMeshProUGUI contentText = contentObj.AddComponent<TMPro.TextMeshProUGUI>();
         contentText.text = "Press <b>SPACE</b> to Jump\n\n" +
-                          "Use <b>WASD</b> or <b>Arrow Keys</b> to Move\n\n" +
+                          "Use <b>WASD</b> or <b>Arrow Keys</b> to Move\n" +
+                          "Hold <b>SHIFT</b> + Direction Keys to run faster\n\n" +
                           "Collect 9 puzzle pieces to complete the level";
         contentText.fontSize = 28;
         contentText.color = new Color(0.9f, 0.9f, 0.9f, 1f);

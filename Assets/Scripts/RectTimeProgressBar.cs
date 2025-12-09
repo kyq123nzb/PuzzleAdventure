@@ -158,6 +158,20 @@ public class RectTimeProgressBar : MonoBehaviour
     {
         Debug.Log("计时完成！");
         StartCoroutine(FlashEffect());
+        
+        // 如果是倒计时且时间归零，触发游戏结束
+        if (countdown && currentTime <= 0)
+        {
+            Debug.Log("⏰ 时间进度条归零，触发游戏结束！");
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.GameOver("时间耗尽！");
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ GameManager.Instance为空，无法触发游戏结束！");
+            }
+        }
     }
 
     private System.Collections.IEnumerator FlashEffect()

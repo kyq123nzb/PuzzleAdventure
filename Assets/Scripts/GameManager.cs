@@ -217,6 +217,17 @@ public class GameManager : MonoBehaviour
                 Time.timeScale = 0f;
                 StopGameTimer();
                 UpdateUIVisibility();
+                // 通知UIManager显示失败面板
+                Debug.Log("💀 GameManager: 游戏状态变为GameOver，准备显示失败面板");
+                if (UIManager.Instance != null)
+                {
+                    Debug.Log("✅ GameManager: UIManager.Instance存在，调用ShowDefeat()");
+                    UIManager.Instance.ShowDefeat();
+                }
+                else
+                {
+                    Debug.LogError("❌ GameManager: UIManager.Instance为空！无法显示失败面板！");
+                }
                 break;
                 
             case GameState.Cutscene:
@@ -622,7 +633,7 @@ public class GameManager : MonoBehaviour
         Debug.Log($"游戏胜利！用时: {FormatTime(gameTime)}");
     }
     
-    void GameOver(string reason)
+    public void GameOver(string reason)
     {
         SetGameState(GameState.GameOver);
         Debug.Log($"游戏结束: {reason} | 用时: {FormatTime(gameTime)}");
@@ -692,9 +703,11 @@ public class GameManager : MonoBehaviour
         // 如果UIManager存在且游戏状态是Playing，自动开始游戏
         if (UIManager.Instance != null && currentState == GameState.Playing)
         {
-            Debug.Log("🔄 GameManager: 场景加载完成，自动开始游戏（RestartGame后）");
-            // 直接调用UIManager的StartGame方法，但跳过主菜单显示
-            UIManager.Instance.StartGameFromRestart();
+            Debug.Log("🔄 GameManager: 场景加载完成，自动开始游戏（RestartGame后，效果与StartGame相同）");
+            // 直接调用UIManager的StartGame方法，效果与点击StartGame按钮完全相同
+            // StartGame会检查场景名称，如果在GameScene就直接ContinueGame，否则StartNewGame
+            // 但这里已经在GameScene了，所以会调用ContinueGame，效果和StartGame一样
+            UIManager.Instance.StartGame();
         }
     }
     

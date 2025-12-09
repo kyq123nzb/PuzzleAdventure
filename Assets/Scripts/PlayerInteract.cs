@@ -48,6 +48,18 @@ public class PlayerInteract : MonoBehaviour
     
     void Update()
     {
+        // 检查游戏是否已开始，只有在游戏开始后才能交互
+        if (UIManager.Instance != null && !UIManager.Instance.IsGameStarted())
+        {
+            return;
+        }
+        
+        // 检查游戏是否暂停
+        if (UIManager.Instance != null && UIManager.Instance.IsGamePaused())
+        {
+            return;
+        }
+        
         // 持续检测可交互物体
         CheckForInteractables();
         
