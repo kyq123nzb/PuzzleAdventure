@@ -571,9 +571,19 @@ public class GameManager : MonoBehaviour
         }
         
         #if UNITY_EDITOR
-        if (Input.GetKeyDown(KeyCode.V)) Victory();
-        if (Input.GetKeyDown(KeyCode.G)) GameOver("测试游戏结束");
-        if (Input.GetKeyDown(KeyCode.P)) CollectPuzzle(1);
+        // 快速收集8块拼图（跳过puzzlepiece2，方便测试）
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            Debug.Log("🔧 调试模式：快速收集8块拼图（跳过puzzlepiece2）");
+            for (int i = 1; i <= totalPuzzles; i++)
+            {
+                if (i != 2 && !IsPuzzleCollected(i)) // 跳过ID为2的拼图
+                {
+                    CollectPuzzle(i);
+                }
+            }
+            Debug.Log($"✅ 已收集 {GetCollectedPuzzlesCount()}/9 块拼图，还剩puzzlepiece2未收集");
+        }
         #endif
     }
     
