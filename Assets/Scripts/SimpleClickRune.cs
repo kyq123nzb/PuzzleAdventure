@@ -7,31 +7,33 @@ public class SimpleClickRune : Interactable
     public Color activeColor = Color.cyan; // 点亮时的颜色
     public Color inactiveColor = Color.gray; // 熄灭时的颜色
 
+    [Header("灯光组件")]
+    public Light runeLight; // 拖入子物体的 Light
+
     [Header("状态")]
     public bool isActive = false; // 当前是否点亮
 
     private Renderer myRenderer;
-    private bool isLocked = false; // 【新增】内部锁定状态
+    private bool isLocked = false; // 内部锁定状态
 
     void Start()
     {
         myRenderer = GetComponent<Renderer>();
-        UpdateVisuals();
-        UpdatePrompt();
+        UpdateVisuals(); // 初始化视觉（颜色+灯光）
+        UpdatePrompt();  // 初始化提示语
     }
 
     public override void Interact()
     {
-        // 如果被锁定了，虽然显示文字，但点击不执行任何逻辑
+        // 如果被锁定了，不执行逻辑
         if (isLocked) return;
 
-        // 如果基类说不能交互，也不执行
         if (!canInteract) return;
 
         // 1. 切换状态
         isActive = !isActive;
 
-        // 2. 更新颜色
+        // 2. 更新颜色和灯光
         UpdateVisuals();
         UpdatePrompt();
 
@@ -44,30 +46,39 @@ public class SimpleClickRune : Interactable
 
     void UpdateVisuals()
     {
+        // 改变材质颜色
         if (myRenderer != null)
         {
             myRenderer.material.color = isActive ? activeColor : inactiveColor;
+        }
+
+        // 【新增】开关灯光
+        if (runeLight != null)
+        {
+            runeLight.enabled = isActive;
+
+            // 可选：让灯光颜色跟符文激活颜色一致
+            if (isActive)
+            {
+                runeLight.color = activeColor;
+            }
         }
     }
 
     void UpdatePrompt()
     {
-        // 只有没锁定时才更新默认提示，防止覆盖胜利感言
         if (!isLocked)
         {
-            interactionText = isActive ? "Blow out the runes" : "Light up the runes";
+            // 英文提示：点亮 / 熄灭
+            interactionText = isActive ? "Extinguish" : "Light up";
         }
     }
 
-    // 【修改】锁定符文，并接收胜利感言
+    // 锁定符文
     public void LockRune(string victoryMessage)
     {
-        isLocked = true; // 内部锁定，禁止点击改变颜色
-
-        // 关键点：保持 canInteract 为 true，这样 InteractionPrompt 才会继续显示文字
+        isLocked = true;
         canInteract = true;
-
-        // 把交互提示直接改成胜利感言
         interactionText = victoryMessage;
     }
 }

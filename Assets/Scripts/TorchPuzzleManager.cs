@@ -5,7 +5,6 @@ using UnityEngine;
 public class TorchPuzzleManager : Interactable
 {
     [Header("谜题设置")]
-    // 正确的ID顺序，例如 {1, 4, 2, 6, 3, 5}
     public List<int> correctSequence;
 
     [Header("场景对象引用")]

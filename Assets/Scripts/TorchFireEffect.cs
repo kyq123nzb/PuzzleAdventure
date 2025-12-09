@@ -80,6 +80,21 @@ public class TorchFireEffect : MonoBehaviour
             lightObj.transform.localPosition = Vector3.up * 0.5f;
             torchLight = lightObj.AddComponent<Light>();
         }
+        // 【新增】强制停止所有粒子，并禁止自动播放
+        DisableAutoPlay(fireParticles);
+        DisableAutoPlay(smokeParticles);
+        DisableAutoPlay(sparksParticles);
+    }
+
+    void DisableAutoPlay(ParticleSystem ps)
+    {
+        if (ps != null)
+        {
+            var main = ps.main;
+            main.playOnAwake = false; // 代码强制关闭
+            ps.Stop(); // 立即停止
+            ps.Clear(); // 清除已经发射出来的粒子
+        }
     }
     
     void SetupParticles()

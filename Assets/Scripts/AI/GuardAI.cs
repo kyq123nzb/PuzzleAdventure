@@ -6,37 +6,35 @@ using UnityEngine.AI;
 public class GuardAI : MonoBehaviour
 {
     [Header("巡逻设置")]
-    public Transform[] patrolPoints;  // 两个巡逻点
-    public float moveSpeed = 2f;
+    public Transform[] patrolPoints;
+    public float moveSpeed = 3.5f; // 稍微快一点，增加压迫感
     public float waitTimeAtPoint = 2f;
 
     [Header("玩家检测设置")]
-    public float detectionRange = 3f;      // 小范围检测（3米）
+    public float detectionRange = 10f; // 视线距离
+    public float damageCooldown = 2.0f; // 伤害间隔
 
-    [Header("伤害设置")]
-    public float damageCooldown = 2.0f;    // 伤害冷却时间（防止一瞬间扣光血）
+    [Header("追逐反馈")]
+    public GameObject warningUIObject; // 直接把那个红色的 Text 物体拖进来
+    public float warningDuration = 3f; // 提示显示多久自动消失
+    public AudioClip spotSound;        // (可选) 发现玩家时的惊叹音效
+
+    private bool isChasing = false;    // 内部状态锁，防止警告一直闪烁
 
     [Header("状态设置")]
-    public bool isActive = true;           // 守卫是否活动
+    public bool isActive = true;
 
     [Header("调试设置")]
     public bool showDebugInfo = true;
-    public Color patrolColor = Color.yellow;
-    public Color detectionColor = Color.red;
 
-    // 私有变量
+    // 私有组件
     private NavMeshAgent navAgent;
     private Transform playerTransform;
     private PlayerController playerController;
-
     private int currentTargetIndex = 0;
     private float waitTimer = 0f;
     private bool isWaiting = false;
-
-    // 伤害控制
-    private bool canDealDamage = true;     // 是否可以造成伤害
-
-    // 碰撞体组件
+    private bool canDealDamage = true;
     private CapsuleCollider guardCollider;
 
     void Start()
@@ -44,6 +42,12 @@ public class GuardAI : MonoBehaviour
         InitializeComponents();
         SetupPatrol();
         SetupCollider();
+
+        // 游戏开始时，强制关闭警告 UI，防止穿帮
+        if (warningUIObject != null)
+        {
+            warningUIObject.SetActive(false);
+        }
     }
 
     void InitializeComponents()
@@ -52,7 +56,7 @@ public class GuardAI : MonoBehaviour
         if (navAgent == null) navAgent = gameObject.AddComponent<NavMeshAgent>();
 
         navAgent.speed = moveSpeed;
-        navAgent.stoppingDistance = 0.1f;
+        navAgent.stoppingDistance = 0.5f; // 稍微大一点，防止贴脸鬼畜
         navAgent.autoBraking = true;
 
         playerTransform = FindPlayer();
@@ -72,7 +76,7 @@ public class GuardAI : MonoBehaviour
             guardCollider.radius = 0.5f;
             guardCollider.center = new Vector3(0, 1f, 0);
         }
-        guardCollider.isTrigger = true; // 设为触发器，用于检测接触
+        guardCollider.isTrigger = true; // 必须是 Trigger 才能穿过并扣血
     }
 
     Transform FindPlayer()
@@ -98,21 +102,26 @@ public class GuardAI : MonoBehaviour
     {
         if (!isActive) return;
 
-        // 如果游戏已经结束，停止守卫逻辑
-        if (GameManager.Instance != null &&
-            (GameManager.Instance.GetCurrentGameState() == GameManager.GameState.GameOver ||
-             GameManager.Instance.GetCurrentGameState() == GameManager.GameState.Victory))
+        // 如果游戏结束或暂停，停止逻辑
+        if (GameManager.Instance != null && GameManager.Instance.GetCurrentGameState() != GameManager.GameState.Playing)
         {
-            if (navAgent.enabled) navAgent.isStopped = true;
+            if (navAgent.isOnNavMesh) navAgent.isStopped = true;
             return;
         }
+        else
+        {
+            if (navAgent.isOnNavMesh) navAgent.isStopped = false;
+        }
 
-        UpdatePatrol();
-        DetectPlayer();
+        DetectPlayer(); // 先检测
+        UpdatePatrol(); // 再巡逻
     }
 
     void UpdatePatrol()
     {
+        // 如果正在追逐玩家，就不执行巡逻逻辑
+        if (isChasing) return;
+
         if (isWaiting)
         {
             waitTimer += Time.deltaTime;
@@ -144,67 +153,86 @@ public class GuardAI : MonoBehaviour
         }
     }
 
+    // ========== 核心检测逻辑 ==========
     void DetectPlayer()
     {
         if (playerTransform == null) return;
 
-        // --- 1. 获取玩家的"真"中心点 (胸口) ---
-        // 尝试获取玩家的碰撞体中心，如果获取不到，就手动抬高 1.5 米
+        // 1. 获取目标点 (玩家胸口，防止看地板)
         Vector3 targetPos;
         Collider playerCol = playerTransform.GetComponent<Collider>();
-        if (playerCol != null)
-        {
-            targetPos = playerCol.bounds.center; // 这是绝对准确的物体中心
-        }
-        else
-        {
-            // 备用方案：手动抬高 1.5 米 (一般角色身高2米，1.5米大概在胸口/头部)
-            targetPos = playerTransform.position + Vector3.up * 1.5f;
-        }
+        if (playerCol != null) targetPos = playerCol.bounds.center;
+        else targetPos = playerTransform.position + Vector3.up * 1.5f;
 
-        // --- 2. 设定守卫的"眼睛"位置 ---
-        // 从守卫头顶发出来，稍微往前一点，防止打到自己
+        // 2. 获取起点 (守卫眼睛，防止看自己肚皮)
         Vector3 startPos = transform.position + Vector3.up * 1.6f + transform.forward * 0.5f;
 
-        // 计算距离和方向
-        float distanceToPlayer = Vector3.Distance(startPos, targetPos); // 注意这里改用 startPos 计算
+        float distanceToPlayer = Vector3.Distance(startPos, targetPos);
         Vector3 directionToPlayer = (targetPos - startPos).normalized;
 
-        // --- 3. 距离检测 ---
+        // 3. 距离判定
         if (distanceToPlayer <= detectionRange)
         {
-            RaycastHit hit;
-
-            // 画出黄线：表示守卫想看哪里
+            // 调试线 (黄色=在范围内)
             Debug.DrawLine(startPos, targetPos, Color.yellow);
 
-            // --- 4. 射线检测 ---
-            // 这里的重点是：终点是 targetPos，而不是无限远
-            if (Physics.Raycast(startPos, directionToPlayer, out hit, distanceToPlayer + 1f)) // 多射 1米 确保穿透
+            RaycastHit hit;
+            // 4. 射线判定 (是否被墙挡住)
+            if (Physics.Raycast(startPos, directionToPlayer, out hit, distanceToPlayer + 1f))
             {
-                // 如果打到了东西，画出红线，终点是打到的位置
-                Debug.DrawLine(startPos, hit.point, Color.red);
-
                 if (hit.collider.CompareTag("Player"))
                 {
-                    Debug.Log("【发现目标】守卫看见了玩家，开始追逐！");
+                    // === [新增] 发现玩家，触发追逐逻辑 ===
+                    EngagePlayer();
+
+                    // 持续更新追逐目标
                     navAgent.SetDestination(playerTransform.position);
-                }
-                else
-                {
-                    // 调试：如果没打中玩家，打中了谁？(很有可能是 Floor/Ground)
-                    // Debug.Log($"视线被阻挡，打到了: {hit.collider.name}");
+
+                    // 调试线 (红色=已锁定)
+                    Debug.DrawLine(startPos, hit.point, Color.red);
                 }
             }
         }
     }
-    
-    // ========== 核心修改：触发器检测逻辑 ==========
+
+    // [新增] 触发追逐状态和警告
+    void EngagePlayer()
+    {
+        // 如果已经是追逐状态，就不重复触发警告 (防止每帧都弹窗)
+        if (isChasing) return;
+
+        isChasing = true; // 锁定状态
+        Debug.Log("【👁️ SPOTTED!】Guard is chasing!");
+
+        // 1. 显示警告 UI
+        if (warningUIObject != null)
+        {
+            warningUIObject.SetActive(true);
+            // 开启协程，几秒后自动关闭
+            StartCoroutine(HideWarningDelay());
+        }
+
+        // 2. 播放音效 (可选)
+        if (spotSound != null)
+        {
+            AudioSource.PlayClipAtPoint(spotSound, transform.position);
+        }
+    }
+
+    // [新增] 延迟关闭 UI
+    IEnumerator HideWarningDelay()
+    {
+        yield return new WaitForSeconds(warningDuration);
+        if (warningUIObject != null)
+        {
+            warningUIObject.SetActive(false);
+        }
+    }
+
+    // ========== 伤害逻辑 ==========
     void OnTriggerEnter(Collider other)
     {
-        // 只有在可以造成伤害时才检测
         if (!canDealDamage) return;
-
         if (other.CompareTag("Player"))
         {
             HandlePlayerContact();
@@ -217,50 +245,27 @@ public class GuardAI : MonoBehaviour
 
         Debug.Log($"<color=red>⚔️ 守卫抓住了玩家！</color>");
 
-        // 1. 通知 GameManager 扣血
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.PlayerDetectedByGuard(); // 这会扣除1点生命值
-
-            // 2. 检查玩家是否还有命
-            int currentLives = GameManager.Instance.PlayerLives; // 假设 GameManager 有这个属性
+            GameManager.Instance.PlayerDetectedByGuard();
+            int currentLives = GameManager.Instance.PlayerLives;
 
             if (currentLives > 0)
             {
-                // === 情况 A: 玩家还有命 ===
-                Debug.Log($"玩家受伤！剩余生命: {currentLives}。守卫重置...");
-
-                // 开启冷却，防止连续扣血
+                // 玩家还有命：开启无敌帧，重置守卫
                 StartCoroutine(DamageCooldownRoutine());
-
-                // 守卫重置行为 (给玩家逃跑机会)
                 ResetGuardPosition();
             }
             else
             {
-                // === 情况 B: 玩家没命了 (Game Over) ===
-                Debug.Log("玩家生命耗尽，游戏结束！");
-
-                // 停止玩家控制
-                if (playerController != null)
-                {
-                    playerController.enabled = false;
-                }
-
-                // 停止守卫
+                // 玩家没命了：游戏结束
+                if (playerController != null) playerController.enabled = false;
                 navAgent.isStopped = true;
                 isActive = false;
-
-                // GameManager 内部应该会处理 SetGameState(GameOver)
             }
-        }
-        else
-        {
-            Debug.LogError("未找到 GameManager！无法处理扣血逻辑。");
         }
     }
 
-    // 伤害冷却协程
     IEnumerator DamageCooldownRoutine()
     {
         canDealDamage = false;
@@ -268,39 +273,31 @@ public class GuardAI : MonoBehaviour
         canDealDamage = true;
     }
 
-    // 重置守卫位置（回到巡逻点，不再追击）
+    // [新增] 重置逻辑
     void ResetGuardPosition()
     {
-        // 停止当前追击
+        // 关键：重置时解除追逐状态，这样下次发现还能再弹警告
+        isChasing = false;
+
+        // 停止当前追逐
         navAgent.ResetPath();
 
-        // 瞬间回到最近的巡逻点 (或者你可以选择只让他停顿几秒)
-        // 这里选择让他回到巡逻起始点，给玩家最大的逃跑机会
-        if (patrolPoints.Length > 0 && patrolPoints[0] != null)
+        // 瞬移回起点 (给玩家喘息机会)
+        if (patrolPoints != null && patrolPoints.Length > 0 && patrolPoints[0] != null)
         {
-            navAgent.Warp(patrolPoints[0].position); // 瞬移回去
+            navAgent.Warp(patrolPoints[0].position);
             currentTargetIndex = 0;
             navAgent.SetDestination(patrolPoints[0].position);
         }
 
-        isWaiting = true; // 让他发一会呆
-        waitTimer = -2f; // 多等2秒再动
+        // 发呆一会
+        isWaiting = true;
+        waitTimer = -2f; // 多等2秒
     }
 
-    void OnDrawGizmosSelected()
+    // 公共重置方法 (给外部调用)
+    public void ResetGuard()
     {
-        if (!showDebugInfo) return;
-
-        Gizmos.color = patrolColor;
-        if (patrolPoints != null)
-        {
-            foreach (var point in patrolPoints)
-            {
-                if (point != null) Gizmos.DrawSphere(point.position, 0.3f);
-            }
-        }
-
-        Gizmos.color = detectionColor;
-        Gizmos.DrawWireSphere(transform.position, detectionRange);
+        ResetGuardPosition();
     }
 }
