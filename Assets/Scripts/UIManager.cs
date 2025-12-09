@@ -40,13 +40,11 @@ public class UIManager : MonoBehaviour
     [Header("胜利界面UI")]
     public GameObject victoryPanel;
     public GameObject victoryText; // 支持Text和TextMeshPro
-    public GameObject victoryRestartButton; // 支持GameObject，自动获取Button组件
     public GameObject victoryQuitButton; // 支持GameObject，自动获取Button组件
     
     [Header("失败界面UI")]
     public GameObject defeatPanel; // 失败/游戏结束面板
     public GameObject defeatText; // 支持Text和TextMeshPro
-    public GameObject defeatRestartButton; // 支持GameObject，自动获取Button组件
     public GameObject defeatQuitButton; // 支持GameObject，自动获取Button组件
     
     [Header("拼图完成庆祝界面")]
@@ -489,24 +487,6 @@ public class UIManager : MonoBehaviour
         }
         
         // 设置失败界面按钮（如果存在）
-        if (defeatRestartButton == null && defeatPanel != null)
-        {
-            Transform restartButton = defeatPanel.transform.Find("DefeatRestartButton");
-            if (restartButton == null)
-            {
-                restartButton = defeatPanel.transform.Find("RestartButton");
-            }
-            if (restartButton != null)
-            {
-                defeatRestartButton = restartButton.gameObject;
-            }
-        }
-        if (defeatRestartButton != null)
-        {
-            SetupButton(defeatRestartButton, RestartGame, "DefeatRestartButton");
-            Debug.Log("✅ UIManager: DefeatRestartButton已连接");
-        }
-        
         if (defeatQuitButton == null && defeatPanel != null)
         {
             Transform quitButton = defeatPanel.transform.Find("DefeatQuitButton");
@@ -614,20 +594,6 @@ public class UIManager : MonoBehaviour
         }
         
         // 胜利界面按钮
-        if (victoryRestartButton == null)
-        {
-            victoryRestartButton = GameObject.Find("VictoryRestartButton");
-            if (victoryRestartButton == null)
-            {
-                victoryRestartButton = GameObject.Find("RestartButton");
-            }
-        }
-        if (victoryRestartButton != null)
-        {
-            SetupButton(victoryRestartButton, RestartGame, "VictoryRestartButton");
-            Debug.Log("✅ UIManager: VictoryRestartButton已连接");
-        }
-        
         if (victoryQuitButton == null)
         {
             victoryQuitButton = GameObject.Find("VictoryQuitButton");
@@ -1442,7 +1408,11 @@ public class UIManager : MonoBehaviour
             if (tmpText != null)
             {
                 tmpText.text = "Defeat";
-                tmpText.fontSize = 96f; // 设置大字体
+                // 只在字体大小小于100时才设置（避免覆盖Inspector中的设置）
+                if (tmpText.fontSize < 100f)
+                {
+                    tmpText.fontSize = 160f; // 设置大字体
+                }
                 tmpText.alignment = TMPro.TextAlignmentOptions.Center;
                 tmpText.enableAutoSizing = false;
                 Debug.Log($"✅ UIManager: DefeatText字体大小已设置为{tmpText.fontSize}，已居中");
@@ -1453,7 +1423,11 @@ public class UIManager : MonoBehaviour
                 if (textLegacy != null)
                 {
                     textLegacy.text = "Defeat";
-                    textLegacy.fontSize = 96;
+                    // 只在字体大小小于100时才设置（避免覆盖Inspector中的设置）
+                    if (textLegacy.fontSize < 100)
+                    {
+                        textLegacy.fontSize = 160;
+                    }
                     textLegacy.alignment = TextAnchor.MiddleCenter;
                     Debug.Log($"✅ UIManager: DefeatText字体大小已设置为{textLegacy.fontSize}，已居中");
                 }
@@ -1468,28 +1442,6 @@ public class UIManager : MonoBehaviour
     // 设置失败界面按钮
     void SetupDefeatButtons()
     {
-        // 设置 defeatRestartButton
-        if (defeatRestartButton == null)
-        {
-            if (defeatPanel != null)
-            {
-                Transform restartButton = defeatPanel.transform.Find("DefeatRestartButton");
-                if (restartButton == null)
-                {
-                    restartButton = defeatPanel.transform.Find("RestartButton");
-                }
-                if (restartButton != null)
-                {
-                    defeatRestartButton = restartButton.gameObject;
-                }
-            }
-        }
-        if (defeatRestartButton != null)
-        {
-            SetupButton(defeatRestartButton, RestartGame, "DefeatRestartButton");
-            Debug.Log("✅ UIManager: DefeatRestartButton已连接");
-        }
-        
         // 设置 defeatQuitButton
         if (defeatQuitButton == null)
         {
@@ -1510,6 +1462,34 @@ public class UIManager : MonoBehaviour
         {
             SetupButton(defeatQuitButton, QuitGame, "DefeatQuitButton");
             Debug.Log("✅ UIManager: DefeatQuitButton已连接");
+            
+            // 设置 defeatQuitButton 的位置（往上移动，参考 startButton 的位置）
+            RectTransform defeatQuitRect = defeatQuitButton.GetComponent<RectTransform>();
+            RectTransform startRect = startButton?.GetComponent<RectTransform>();
+            if (defeatQuitRect != null && startRect != null)
+            {
+                // 设置按钮大小：与 startButton 一样大小
+                defeatQuitRect.sizeDelta = startRect.sizeDelta;
+                defeatQuitRect.localScale = Vector3.one;
+                
+                // 设置按钮位置：水平居中，垂直位置在屏幕底部1/4处
+                defeatQuitRect.anchorMin = new Vector2(0.5f, 0.5f);
+                defeatQuitRect.anchorMax = new Vector2(0.5f, 0.5f);
+                defeatQuitRect.pivot = new Vector2(0.5f, 0.5f);
+                
+                // 计算位置：屏幕底部1/4的位置
+                Canvas canvas = defeatQuitRect.GetComponentInParent<Canvas>();
+                float screenHeight = Screen.height;
+                if (canvas != null && canvas.GetComponent<RectTransform>() != null)
+                {
+                    screenHeight = canvas.GetComponent<RectTransform>().rect.height;
+                }
+                // 屏幕中心是0，底部是-screenHeight/2，底部1/4位置是 -screenHeight/2 + screenHeight/4 = -screenHeight/4
+                float buttonY = -screenHeight / 4f;
+                defeatQuitRect.anchoredPosition = new Vector2(0, buttonY);
+                
+                Debug.Log($"✅ UIManager: DefeatQuitButton位置已设置: ({defeatQuitRect.anchoredPosition.x}, {defeatQuitRect.anchoredPosition.y})");
+            }
         }
     }
     
@@ -1525,126 +1505,30 @@ public class UIManager : MonoBehaviour
         Image startImage = startButton?.GetComponent<Image>();
         Image quitImage = quitButton?.GetComponent<Image>();
         
-        // 设置 victoryRestartButton（参考 startButton 的样式）
-        if (victoryRestartButton != null && startRect != null)
-        {
-            RectTransform restartRect = victoryRestartButton.GetComponent<RectTransform>();
-            if (restartRect != null)
-            {
-                // 设置按钮大小（参考 startButton，确保能包裹文字）
-                restartRect.sizeDelta = startRect.sizeDelta;
-                restartRect.localScale = Vector3.one;
-                
-                // 设置按钮位置：水平居中，垂直位置在文本下方
-                restartRect.anchorMin = new Vector2(0.5f, 0.5f);
-                restartRect.anchorMax = new Vector2(0.5f, 0.5f);
-                restartRect.pivot = new Vector2(0.5f, 0.5f);
-                
-                // 计算位置：文本下方，参考 startButton 的垂直位置，但往下移动一些
-                float buttonY = startRect.anchoredPosition.y - 30f; // 往下移动30像素
-                restartRect.anchoredPosition = new Vector2(0, buttonY);
-                
-                Debug.Log($"✅ UIManager: VictoryRestartButton位置已设置: ({restartRect.anchoredPosition.x}, {restartRect.anchoredPosition.y})");
-            }
-            
-            // 复制颜色
-            Image restartImage = victoryRestartButton.GetComponent<Image>();
-            if (startImage != null && restartImage != null)
-            {
-                restartImage.color = startImage.color;
-            }
-            
-            // 复制文本样式
-            CopyButtonTextStyle(startButton, victoryRestartButton);
-            
-            // 确保按钮大小足够包裹文字
-            EnsureButtonFitsText(victoryRestartButton);
-        }
-        
-        // 设置 victoryQuitButton（参考 quitButton 的样式）
-        if (victoryQuitButton != null && quitRect != null)
+        // 设置 victoryQuitButton（参考 startButton 的样式，往上移动）
+        if (victoryQuitButton != null && startRect != null)
         {
             RectTransform victoryQuitRect = victoryQuitButton.GetComponent<RectTransform>();
             if (victoryQuitRect != null)
             {
-                // 设置按钮大小：与 restartButton 一样大小
-                if (victoryRestartButton != null)
-                {
-                    RectTransform restartRect = victoryRestartButton.GetComponent<RectTransform>();
-                    if (restartRect != null)
-                    {
-                        victoryQuitRect.sizeDelta = restartRect.sizeDelta; // 使用 restartButton 的大小
-                    }
-                }
-                else
-                {
-                    victoryQuitRect.sizeDelta = quitRect.sizeDelta; // 如果没有 restartButton，使用 quitButton 的大小
-                }
+                // 设置按钮大小：与 startButton 一样大小
+                victoryQuitRect.sizeDelta = startRect.sizeDelta;
                 victoryQuitRect.localScale = Vector3.one;
                 
-                // 设置按钮位置：水平居中，垂直位置在 restartButton 下方
+                // 设置按钮位置：水平居中，垂直位置在屏幕底部1/4处
                 victoryQuitRect.anchorMin = new Vector2(0.5f, 0.5f);
                 victoryQuitRect.anchorMax = new Vector2(0.5f, 0.5f);
                 victoryQuitRect.pivot = new Vector2(0.5f, 0.5f);
                 
-                // 计算位置：restartButton 下方，距离与 congratulations 到 restartButton 的距离相同
-                float buttonY = 0f;
-                if (victoryRestartButton != null)
+                // 计算位置：屏幕底部1/4的位置
+                Canvas canvas = victoryQuitRect.GetComponentInParent<Canvas>();
+                float screenHeight = Screen.height;
+                if (canvas != null && canvas.GetComponent<RectTransform>() != null)
                 {
-                    RectTransform restartRect = victoryRestartButton.GetComponent<RectTransform>();
-                    if (restartRect != null)
-                    {
-                        // 计算 congratulations 文本底部到 restartButton 顶部的距离
-                        float textToRestartDistance = 150f; // 默认间距
-                        
-                        if (victoryText != null)
-                        {
-                            RectTransform textRect = victoryText.GetComponent<RectTransform>();
-                            if (textRect != null)
-                            {
-                                // 文本中心Y坐标
-                                float textCenterY = textRect.anchoredPosition.y;
-                                
-                                // 计算文本高度
-                                float textHeight = 0f;
-                                TMPro.TextMeshProUGUI tmpText = victoryText.GetComponent<TMPro.TextMeshProUGUI>();
-                                if (tmpText != null)
-                                {
-                                    textHeight = tmpText.preferredHeight;
-                                }
-                                else
-                                {
-                                    Text textLegacy = victoryText.GetComponent<Text>();
-                                    if (textLegacy != null)
-                                    {
-                                        textHeight = textLegacy.preferredHeight;
-                                    }
-                                }
-                                
-                                // 文本底部 = 文本中心 - 文本高度/2
-                                float textBottom = textCenterY - textHeight / 2f;
-                                
-                                // restartButton 顶部 = restartButton 中心 + 按钮高度/2
-                                float restartTop = restartRect.anchoredPosition.y + restartRect.sizeDelta.y / 2f;
-                                
-                                // 计算距离
-                                textToRestartDistance = textBottom - restartTop;
-                            }
-                        }
-                        
-                        // quitButton 顶部应该在 restartButton 下方，距离相同
-                        // restartButton 底部 = restartButton 中心 - 按钮高度/2
-                        float restartBottom = restartRect.anchoredPosition.y - restartRect.sizeDelta.y / 2f;
-                        
-                        // quitButton 中心 = restartButton 底部 - 间距 - quitButton高度/2
-                        buttonY = restartBottom - textToRestartDistance - victoryQuitRect.sizeDelta.y / 2f;
-                    }
+                    screenHeight = canvas.GetComponent<RectTransform>().rect.height;
                 }
-                else
-                {
-                    // 如果没有 restartButton，使用 quitButton 的位置往下移动
-                    buttonY = quitRect.anchoredPosition.y - 30f;
-                }
+                // 屏幕中心是0，底部是-screenHeight/2，底部1/4位置是 -screenHeight/2 + screenHeight/4 = -screenHeight/4
+                float buttonY = -screenHeight / 4f;
                 victoryQuitRect.anchoredPosition = new Vector2(0, buttonY);
                 
                 Debug.Log($"✅ UIManager: VictoryQuitButton位置已设置: ({victoryQuitRect.anchoredPosition.x}, {victoryQuitRect.anchoredPosition.y})");
@@ -1652,13 +1536,13 @@ public class UIManager : MonoBehaviour
             
             // 复制颜色
             Image victoryQuitImage = victoryQuitButton.GetComponent<Image>();
-            if (quitImage != null && victoryQuitImage != null)
+            if (startImage != null && victoryQuitImage != null)
             {
-                victoryQuitImage.color = quitImage.color;
+                victoryQuitImage.color = startImage.color;
             }
             
             // 复制文本样式
-            CopyButtonTextStyle(quitButton, victoryQuitButton);
+            CopyButtonTextStyle(startButton, victoryQuitButton);
             
             // 确保按钮大小足够包裹文字
             EnsureButtonFitsText(victoryQuitButton);
@@ -1793,7 +1677,11 @@ public class UIManager : MonoBehaviour
             TMPro.TextMeshProUGUI tmpText = victoryText.GetComponent<TMPro.TextMeshProUGUI>();
             if (tmpText != null)
             {
-                tmpText.fontSize = 96f; // 设置大字体
+                // 只在字体大小小于100时才设置（避免覆盖Inspector中的设置）
+                if (tmpText.fontSize < 100f)
+                {
+                    tmpText.fontSize = 160f; // 设置大字体
+                }
                 tmpText.alignment = TMPro.TextAlignmentOptions.Center;
                 tmpText.enableAutoSizing = false;
                 Debug.Log($"✅ UIManager: VictoryText字体大小已设置为{tmpText.fontSize}，已居中");
@@ -1803,7 +1691,11 @@ public class UIManager : MonoBehaviour
                 Text textLegacy = victoryText.GetComponent<Text>();
                 if (textLegacy != null)
                 {
-                    textLegacy.fontSize = 96;
+                    // 只在字体大小小于100时才设置（避免覆盖Inspector中的设置）
+                    if (textLegacy.fontSize < 100)
+                    {
+                        textLegacy.fontSize = 160;
+                    }
                     textLegacy.alignment = TextAnchor.MiddleCenter;
                     Debug.Log($"✅ UIManager: VictoryText字体大小已设置为{textLegacy.fontSize}，已居中");
                 }

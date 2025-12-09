@@ -572,7 +572,7 @@ public class GameManager : MonoBehaviour
         
         #if UNITY_EDITOR
         // 快速收集8块拼图（跳过puzzlepiece2，方便测试）
-        if (Input.GetKeyDown(KeyCode.F))
+        if (Input.GetKeyDown(KeyCode.R))
         {
             Debug.Log("🔧 调试模式：快速收集8块拼图（跳过puzzlepiece2）");
             for (int i = 1; i <= totalPuzzles; i++)
