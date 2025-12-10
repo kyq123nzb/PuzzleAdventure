@@ -5,6 +5,7 @@ public class BossController : MonoBehaviour
 {
     [Header("Boss 基础属性")]
     public int maxHealth = 3;
+    public bool IsDead => isDead;
 
     [Header("Boss 灵活走位设置 ")]
     public bool enableMovement = true;
@@ -133,15 +134,16 @@ public class BossController : MonoBehaviour
         if (laserObject != null) laserObject.SetActive(isActive);
     }
 
-    public void TakeDamage()
+    public int TakeDamage()
     {
-        if (isDead) return;
+        if (isDead) return 0;
+
         currentHealth--;
         Debug.Log($"⚔️ Boss 受到伤害！剩余血量: {currentHealth}");
 
-        moveTimer = 0; // 受伤立即换位
-
         if (currentHealth <= 0) Die();
+
+        return currentHealth; // [新增] 返回血量
     }
 
     void Die()

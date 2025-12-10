@@ -213,13 +213,21 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2803926655296073521, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
+      propertyPath: m_Intensity
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 3325177618502047098, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
       propertyPath: m_Name
       value: Puzzle_03
       objectReference: {fileID: 0}
     - target: {fileID: 5306171874241667552, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.202
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 5306171874241667552, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.27
       objectReference: {fileID: 0}
     - target: {fileID: 6343510884765986036, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
       propertyPath: puzzleId

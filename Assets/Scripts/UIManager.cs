@@ -2,9 +2,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-
+using UnityEngine.UI;
+using static System.Net.Mime.MediaTypeNames;
+using TMPro; // 确保引入 TMP 命名空间
+using Image = UnityEngine.UI.Image;
+using Text = UnityEngine.UI.Text;
 /// <summary>
 /// UI管理器 - 统一管理游戏中的所有UI元素
 /// </summary>
@@ -22,6 +25,9 @@ public class UIManager : MonoBehaviour
     public GameObject gameHUD;
     public GameObject puzzleProgressText; // 支持Text和TextMeshPro
     // public Image puzzleProgressFill; // 已移除，只使用文本显示进度
+    [Tooltip("拖入用于显示玩家生命值的 TextMeshPro 对象")]
+    public GameObject playerLivesText;
+
     public GameObject interactionPromptPanel;
     public GameObject interactionPromptText; // 支持Text和TextMeshPro
     public GameObject tutorialPanel; // 游戏教程面板（显示操作提示）
@@ -99,8 +105,12 @@ public class UIManager : MonoBehaviour
                 // 延迟一帧后开始游戏，确保所有组件都已初始化
                 StartCoroutine(DelayedStartFromRestart());
             }
+            // ========== [新增] 初始化显示血量 ==========
+            // 游戏刚开始时同步一次当前血量
+            UpdatePlayerLives(GameManager.Instance.PlayerLives);
+            // =======================================
         }
-        
+
         if (shouldShowMainMenu)
         {
             ShowMainMenu();
@@ -191,7 +201,13 @@ public class UIManager : MonoBehaviour
         {
             puzzleProgressText.SetActive(true);
         }
-        
+
+        // ========== [新增] 重启时也更新血量 ==========
+        if (GameManager.Instance != null)
+        {
+            UpdatePlayerLives(GameManager.Instance.PlayerLives);
+        }
+        // =======================================
         // 初始化进度显示（重置为0）
         InitializeProgress();
         
@@ -273,6 +289,9 @@ public class UIManager : MonoBehaviour
         // 订阅拼图收集事件，实时更新进度
         GameManager.OnPuzzleCollected += OnPuzzleCollected;
         GameManager.OnPuzzleCollected += UpdatePuzzleVisual;
+        // ========== [新增] 订阅生命值变化事件 ==========
+        GameManager.OnPlayerLivesChanged += UpdatePlayerLives;
+        // ==========================================
         Debug.Log("UIManager: 已订阅GameManager.OnPuzzleCollected事件");
     }
     
@@ -280,8 +299,40 @@ public class UIManager : MonoBehaviour
     {
         // 取消订阅
         GameManager.OnPuzzleCollected -= OnPuzzleCollected;
+        // ========== [新增] 取消订阅 ==========
+        GameManager.OnPlayerLivesChanged -= UpdatePlayerLives;
+        // =================================
     }
-    
+
+    // ========== [新增] 更新玩家生命值显示的方法 ==========
+    public void UpdatePlayerLives(int lives)
+    {
+        if (playerLivesText != null)
+        {
+            string textContent = $"LIVES: {lives}";
+
+            // 优先尝试使用 TextMeshPro
+            TMPro.TextMeshProUGUI tmpText = playerLivesText.GetComponent<TMPro.TextMeshProUGUI>();
+            if (tmpText != null)
+            {
+                tmpText.text = textContent;
+                // 如果血量 <= 1，显示红色警告，否则白色
+                tmpText.color = (lives <= 1) ? Color.red : Color.white;
+            }
+            else
+            {
+                // 降级使用普通 Text
+                Text legacyText = playerLivesText.GetComponent<Text>();
+                if (legacyText != null)
+                {
+                    legacyText.text = textContent;
+                    legacyText.color = (lives <= 1) ? Color.red : Color.white;
+                }
+            }
+            Debug.Log($"UI 更新生命值: {lives}");
+        }
+    }
+    // =================================================
     void OnPuzzleCollected(int puzzleId)
     {
         // 当拼图被收集时，实时更新UI
@@ -383,8 +434,12 @@ public class UIManager : MonoBehaviour
         if (puzzleProgressText != null) puzzleProgressText.SetActive(false);
         if (hudPauseButton != null) hudPauseButton.SetActive(false);
         if (hudResumeButton != null) hudResumeButton.SetActive(false);
+
+        // ========== [新增] 隐藏血量文本 (在主菜单时) ==========
+        if (playerLivesText != null) playerLivesText.SetActive(false);
+        // ================================================
     }
-    
+
     // 禁用按钮的键盘导航，只能通过鼠标点击
     void DisableButtonNavigation(Button btn)
     {
@@ -651,6 +706,7 @@ public class UIManager : MonoBehaviour
         if (puzzleProgressText != null) puzzleProgressText.SetActive(false);
         if (hudPauseButton != null) hudPauseButton.SetActive(false);
         if (hudResumeButton != null) hudResumeButton.SetActive(false);
+        if (playerLivesText != null) playerLivesText.SetActive(false); // [新增]
     }
     
     // 测试方法：验证按钮点击是否工作
@@ -1025,6 +1081,10 @@ public class UIManager : MonoBehaviour
             
             // 初始化进度显示
             InitializeProgress();
+
+            // ========== [新增] 游戏开始时刷新血量UI ==========
+            UpdatePlayerLives(GameManager.Instance.PlayerLives);
+            // =============================================
         }
         else
         {
@@ -1053,8 +1113,9 @@ public class UIManager : MonoBehaviour
                 puzzleProgressText.SetActive(true);
                 Debug.Log("✅ UIManager: 自动找到并显示进度文本");
             }
+
         }
-        
+        if (playerLivesText != null) playerLivesText.SetActive(true); // [新增]
         // 显示教程面板
         ShowTutorial();
         

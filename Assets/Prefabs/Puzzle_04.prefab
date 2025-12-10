@@ -181,6 +181,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2803926655296073521, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
+      propertyPath: m_Intensity
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 3325177618502047098, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
       propertyPath: m_Name
       value: Puzzle_04
@@ -191,7 +195,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5306171874241667552, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.454
+      value: 0.343
       objectReference: {fileID: 0}
     - target: {fileID: 6343510884765986036, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
       propertyPath: puzzleId

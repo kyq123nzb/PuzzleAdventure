@@ -29,7 +29,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2261035465718484300}
   m_LocalRotation: {x: 0.55835545, y: 0.4335873, z: -0.44651982, w: 0.5485082}
-  m_LocalPosition: {x: 2.061, y: 0.554, z: 0.036}
+  m_LocalPosition: {x: -0.067, y: -0.015, z: -0.147}
   m_LocalScale: {x: 0.5, y: 0.050000004, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -147,7 +147,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 645366121080534858, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.101
       objectReference: {fileID: 0}
     - target: {fileID: 645366121080534858, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
       propertyPath: m_LocalPosition.z
@@ -181,17 +181,21 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2803926655296073521, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
+      propertyPath: m_Intensity
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 3325177618502047098, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
       propertyPath: m_Name
       value: Puzzle_01
       objectReference: {fileID: 0}
     - target: {fileID: 5306171874241667552, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 2.29
+      value: 0.296
       objectReference: {fileID: 0}
     - target: {fileID: 5306171874241667552, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.37
+      value: 0.07
       objectReference: {fileID: 0}
     - target: {fileID: 5306171874241667552, guid: d25801b318cce8d48ad846654ca0d05f, type: 3}
       propertyPath: m_LocalPosition.z
