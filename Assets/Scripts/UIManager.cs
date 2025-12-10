@@ -1,11 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro; // 确保引入 TMP 命名空间
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using static System.Net.Mime.MediaTypeNames;
-using TMPro; // 确保引入 TMP 命名空间
 using Image = UnityEngine.UI.Image;
 using Text = UnityEngine.UI.Text;
 /// <summary>
@@ -24,9 +24,13 @@ public class UIManager : MonoBehaviour
     [Header("游戏内UI")]
     public GameObject gameHUD;
     public GameObject puzzleProgressText; // 支持Text和TextMeshPro
-    // public Image puzzleProgressFill; // 已移除，只使用文本显示进度
-    [Tooltip("拖入用于显示玩家生命值的 TextMeshPro 对象")]
-    public GameObject playerLivesText;
+    // ++++++++++ [修改 1/5] 爱心生命值系统 ++++++++++
+    [Header("生命值显示 (Hearts)")]
+    public GameObject livesContainer; // 爱心的父物体容器（用于整体开关）
+    public Image[] heartIcons;        // 存放所有爱心图标的数组 (Heart1, Heart2, Heart3)
+    public Sprite fullHeartSprite;    // 满心图标 (可选)
+    public Sprite emptyHeartSprite;   // 空心图标 (可选)
+    // ++++++++++++++++++++++++++++++++++++++++++++++
 
     public GameObject interactionPromptPanel;
     public GameObject interactionPromptText; // 支持Text和TextMeshPro
@@ -105,10 +109,9 @@ public class UIManager : MonoBehaviour
                 // 延迟一帧后开始游戏，确保所有组件都已初始化
                 StartCoroutine(DelayedStartFromRestart());
             }
-            // ========== [新增] 初始化显示血量 ==========
-            // 游戏刚开始时同步一次当前血量
+            // ++++++++++ [修改 2/5] 初始化爱心 ++++++++++
             UpdatePlayerLives(GameManager.Instance.PlayerLives);
-            // =======================================
+            // +++++++++++++++++++++++++++++++++++++++++
         }
 
         if (shouldShowMainMenu)
@@ -159,7 +162,15 @@ public class UIManager : MonoBehaviour
         {
             gameHUD.SetActive(true);
         }
-        
+
+        // ++++++++++ [修改 3/5] 重启时刷新爱心 ++++++++++
+        if (livesContainer != null) livesContainer.SetActive(true);
+        if (GameManager.Instance != null)
+        {
+            UpdatePlayerLives(GameManager.Instance.PlayerLives);
+        }
+        // +++++++++++++++++++++++++++++++++++++++++++++
+
         // 确保GameHUDCanvas已激活
         GameObject gameHUDCanvas = GameObject.Find("GameHUDCanvas");
         if (gameHUDCanvas == null)
@@ -304,35 +315,52 @@ public class UIManager : MonoBehaviour
         // =================================
     }
 
-    // ========== [新增] 更新玩家生命值显示的方法 ==========
-    public void UpdatePlayerLives(int lives)
+    // ++++++++++ [核心修改 4/5] 用图标更新生命值 ++++++++++
+    public void UpdatePlayerLives(int currentLives)
     {
-        if (playerLivesText != null)
+        // 如果容器没开，先打开
+        if (livesContainer != null && !livesContainer.activeSelf)
         {
-            string textContent = $"LIVES: {lives}";
+            livesContainer.SetActive(true);
+        }
 
-            // 优先尝试使用 TextMeshPro
-            TMPro.TextMeshProUGUI tmpText = playerLivesText.GetComponent<TMPro.TextMeshProUGUI>();
-            if (tmpText != null)
+        if (heartIcons == null) return;
+
+        // 遍历所有心形图标
+        for (int i = 0; i < heartIcons.Length; i++)
+        {
+            if (heartIcons[i] == null) continue;
+
+            // 逻辑：如果当前索引 < 剩余生命值，显示满心；否则显示空心(或隐藏)
+            if (i < currentLives)
             {
-                tmpText.text = textContent;
-                // 如果血量 <= 1，显示红色警告，否则白色
-                tmpText.color = (lives <= 1) ? Color.red : Color.white;
+                // 活着：显示红心
+                heartIcons[i].gameObject.SetActive(true); // 确保激活
+                if (fullHeartSprite != null) heartIcons[i].sprite = fullHeartSprite;
+                heartIcons[i].color = Color.white; // 正常颜色
             }
             else
             {
-                // 降级使用普通 Text
-                Text legacyText = playerLivesText.GetComponent<Text>();
-                if (legacyText != null)
+                // 扣血了：
+                // 方案A：直接隐藏图标 (简单)
+                // heartIcons[i].gameObject.SetActive(false);
+
+                // 方案B：变黑/变半透明 (更直观)
+                if (emptyHeartSprite != null)
                 {
-                    legacyText.text = textContent;
-                    legacyText.color = (lives <= 1) ? Color.red : Color.white;
+                    heartIcons[i].sprite = emptyHeartSprite;
+                    heartIcons[i].color = Color.white;
+                }
+                else
+                {
+                    // 如果没有空心图，就变黑
+                    heartIcons[i].color = new Color(0.2f, 0.2f, 0.2f, 0.5f);
                 }
             }
-            Debug.Log($"UI 更新生命值: {lives}");
         }
+        Debug.Log($"UI 更新爱心: {currentLives}");
     }
-    // =================================================
+    // +++++++++++++++++++++++++++++++++++++++++++++++++++
     void OnPuzzleCollected(int puzzleId)
     {
         // 当拼图被收集时，实时更新UI
@@ -435,9 +463,9 @@ public class UIManager : MonoBehaviour
         if (hudPauseButton != null) hudPauseButton.SetActive(false);
         if (hudResumeButton != null) hudResumeButton.SetActive(false);
 
-        // ========== [新增] 隐藏血量文本 (在主菜单时) ==========
-        if (playerLivesText != null) playerLivesText.SetActive(false);
-        // ================================================
+        // ++++++++++ [修改 5/5] 初始隐藏爱心容器 ++++++++++
+        if (livesContainer != null) livesContainer.SetActive(false);
+        // +++++++++++++++++++++++++++++++++++++++++++++++
     }
 
     // 禁用按钮的键盘导航，只能通过鼠标点击
@@ -706,7 +734,6 @@ public class UIManager : MonoBehaviour
         if (puzzleProgressText != null) puzzleProgressText.SetActive(false);
         if (hudPauseButton != null) hudPauseButton.SetActive(false);
         if (hudResumeButton != null) hudResumeButton.SetActive(false);
-        if (playerLivesText != null) playerLivesText.SetActive(false); // [新增]
     }
     
     // 测试方法：验证按钮点击是否工作
@@ -1115,7 +1142,6 @@ public class UIManager : MonoBehaviour
             }
 
         }
-        if (playerLivesText != null) playerLivesText.SetActive(true); // [新增]
         // 显示教程面板
         ShowTutorial();
         
