@@ -53,9 +53,10 @@ public class UIManager : MonoBehaviour
     public GameObject victoryQuitButton; // 支持GameObject，自动获取Button组件
     
     [Header("失败界面UI")]
-    public GameObject defeatPanel; // 失败/游戏结束面板
-    public GameObject defeatText; // 支持Text和TextMeshPro
-    public GameObject defeatQuitButton; // 支持GameObject，自动获取Button组件
+public GameObject defeatPanel; // 失败/游戏结束面板
+public GameObject defeatText; // 支持Text和TextMeshPro
+public GameObject defeatQuitButton; // 支持GameObject，自动获取Button组件
+public GameObject defeatRestartButton; // 新增：重新开始按钮
     
     [Header("拼图完成庆祝界面")]
     public GameObject puzzleCompletePanel; // 拼图收集完成时的庆祝界面
@@ -1529,56 +1530,57 @@ public class UIManager : MonoBehaviour
     // 设置失败界面按钮
     void SetupDefeatButtons()
     {
-        // 设置 defeatQuitButton
-        if (defeatQuitButton == null)
+// 设置 defeatRestartButton
+    if (defeatRestartButton == null)
+    {
+        if (defeatPanel != null)
         {
-            if (defeatPanel != null)
+            Transform restartButton = defeatPanel.transform.Find("DefeatRestartButton");
+            if (restartButton == null)
             {
-                Transform quitButton = defeatPanel.transform.Find("DefeatQuitButton");
-                if (quitButton == null)
-                {
-                    quitButton = defeatPanel.transform.Find("QuitButton");
-                }
-                if (quitButton != null)
-                {
-                    defeatQuitButton = quitButton.gameObject;
-                }
+                restartButton = defeatPanel.transform.Find("RestartButton");
             }
-        }
-        if (defeatQuitButton != null)
-        {
-            SetupButton(defeatQuitButton, QuitGame, "DefeatQuitButton");
-            Debug.Log("✅ UIManager: DefeatQuitButton已连接");
-            
-            // 设置 defeatQuitButton 的位置（往上移动，参考 startButton 的位置）
-            RectTransform defeatQuitRect = defeatQuitButton.GetComponent<RectTransform>();
-            RectTransform startRect = startButton?.GetComponent<RectTransform>();
-            if (defeatQuitRect != null && startRect != null)
+            if (restartButton != null)
             {
-                // 设置按钮大小：与 startButton 一样大小
-                defeatQuitRect.sizeDelta = startRect.sizeDelta;
-                defeatQuitRect.localScale = Vector3.one;
-                
-                // 设置按钮位置：水平居中，垂直位置在屏幕底部1/4处
-                defeatQuitRect.anchorMin = new Vector2(0.5f, 0.5f);
-                defeatQuitRect.anchorMax = new Vector2(0.5f, 0.5f);
-                defeatQuitRect.pivot = new Vector2(0.5f, 0.5f);
-                
-                // 计算位置：屏幕底部1/4的位置
-                Canvas canvas = defeatQuitRect.GetComponentInParent<Canvas>();
-                float screenHeight = Screen.height;
-                if (canvas != null && canvas.GetComponent<RectTransform>() != null)
-                {
-                    screenHeight = canvas.GetComponent<RectTransform>().rect.height;
-                }
-                // 屏幕中心是0，底部是-screenHeight/2，底部1/4位置是 -screenHeight/2 + screenHeight/4 = -screenHeight/4
-                float buttonY = -screenHeight / 4f;
-                defeatQuitRect.anchoredPosition = new Vector2(0, buttonY);
-                
-                Debug.Log($"✅ UIManager: DefeatQuitButton位置已设置: ({defeatQuitRect.anchoredPosition.x}, {defeatQuitRect.anchoredPosition.y})");
+                defeatRestartButton = restartButton.gameObject;
             }
         }
     }
+    if (defeatRestartButton != null)
+    {
+        SetupButton(defeatRestartButton, RestartGame, "DefeatRestartButton");
+        Debug.Log("✅ UIManager: DefeatRestartButton已连接");
+        
+        // 设置 defeatRestartButton 的位置（在退出按钮上方）
+        RectTransform defeatRestartRect = defeatRestartButton.GetComponent<RectTransform>();
+        RectTransform startRect = startButton?.GetComponent<RectTransform>();
+        if (defeatRestartRect != null && startRect != null)
+        {
+            // 设置按钮大小：与 startButton 一样大小
+            defeatRestartRect.sizeDelta = startRect.sizeDelta;
+            defeatRestartRect.localScale = Vector3.one;
+            
+            // 设置按钮位置：水平居中，在退出按钮上方
+            defeatRestartRect.anchorMin = new Vector2(0.5f, 0.5f);
+            defeatRestartRect.anchorMax = new Vector2(0.5f, 0.5f);
+            defeatRestartRect.pivot = new Vector2(0.5f, 0.5f);
+            
+            // 计算位置：在退出按钮上方100像素
+            float buttonY = -100f; // 默认位置
+            if (defeatQuitButton != null)
+            {
+                RectTransform defeatQuitRect = defeatQuitButton.GetComponent<RectTransform>();
+                if (defeatQuitRect != null)
+                {
+                    buttonY = defeatQuitRect.anchoredPosition.y + 100f;
+                }
+            }
+            defeatRestartRect.anchoredPosition = new Vector2(0, buttonY);
+            
+            Debug.Log($"✅ UIManager: DefeatRestartButton位置已设置: ({defeatRestartRect.anchoredPosition.x}, {defeatRestartRect.anchoredPosition.y})");
+        }
+    }
+}
     
     // 同步胜利界面按钮样式与主菜单按钮一致，并设置布局
     void SyncVictoryButtonStyles()
@@ -1798,6 +1800,9 @@ public class UIManager : MonoBehaviour
     {
         Debug.Log("🔄 UIManager: RestartGame 被调用，准备重新开始游戏（完全重新加载场景，效果与StartGame相同）");
         
+        // 重要：先恢复时间缩放，避免场景加载卡住
+        Time.timeScale = 1f;
+        
         // 隐藏所有UI面板
         if (victoryPanel != null) victoryPanel.SetActive(false);
         if (defeatPanel != null) defeatPanel.SetActive(false);
@@ -1808,7 +1813,6 @@ public class UIManager : MonoBehaviour
         // 重置游戏状态
         isGameStarted = false;
         isPaused = false;
-        Time.timeScale = 1f;
         
         // 调用GameManager的RestartGame，这会重新加载场景并重置所有数据
         // 场景加载后，UIManager.Start()会检测到Loading状态，自动跳过主菜单直接开始游戏
@@ -1822,6 +1826,7 @@ public class UIManager : MonoBehaviour
             // 如果没有GameManager，直接重新加载场景
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
+        
     }
     
     public void QuitToMainMenu()

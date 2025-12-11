@@ -286,15 +286,17 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("🔄 GameManager: RestartGame 被调用，重置所有游戏数据并重新加载场景");
         
+        // 重要：先恢复时间缩放，避免场景加载和初始化卡住
+        Time.timeScale = 1f;
+        
         // 重置所有游戏数据
         ResetGameData();
         
+        // 先设置为 Loading 状态，这样场景加载后OnSceneLoaded能正确检测到
+        SetGameState(GameState.Loading);
+        
         // 重新加载当前场景（场景加载后会自动初始化）
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-        
-        // 注意：SetGameState 会在场景加载完成后通过 OnSceneLoaded 调用
-        // 这里先设置为 Loading 状态，场景加载完成后会自动变为 Playing
-        SetGameState(GameState.Loading);
     }
     
     public void QuitGame()
