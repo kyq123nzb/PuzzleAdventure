@@ -33,11 +33,17 @@ public class SimpleClickRune : Interactable
         // 1. 切换状态
         isActive = !isActive;
 
-        // 2. 更新颜色和灯光
+        // 2. 播放激活符文音效
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayRuneActivateSound();
+        }
+
+        // 3. 更新颜色和灯光
         UpdateVisuals();
         UpdatePrompt();
 
-        // 3. 通知经理
+        // 4. 通知经理
         if (manager != null)
         {
             manager.CheckPuzzle();

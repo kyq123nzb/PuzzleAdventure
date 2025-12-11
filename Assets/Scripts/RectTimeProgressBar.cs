@@ -49,6 +49,7 @@ public class RectTimeProgressBar : MonoBehaviour
             {
                 currentTime = 0;
                 isRunning = false;
+                Debug.Log("⏰ 进度条倒计时归零！");
                 OnTimerComplete();
             }
         }
@@ -100,7 +101,7 @@ public class RectTimeProgressBar : MonoBehaviour
         float newWidth = originalWidth * progress;
         fillRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, newWidth);
 
-        // 注意：为了“右向左”效果，pivot 必须设为 (0, 0.5)
+        // 注意：为了"右向左"效果，pivot 必须设为 (0, 0.5)
         // 你可以在 Editor 中设定，也可以自动设定：
         fillRect.pivot = new Vector2(0f, 0.5f);
 
@@ -156,20 +157,35 @@ public class RectTimeProgressBar : MonoBehaviour
 
     private void OnTimerComplete()
     {
-        Debug.Log("计时完成！");
+        Debug.Log("⏰ RectTimeProgressBar: 计时完成！");
         StartCoroutine(FlashEffect());
         
-        // 如果是倒计时且时间归零，触发游戏结束
+        // 如果是倒计时且时间归零，触发游戏结束并显示失败界面
         if (countdown && currentTime <= 0)
         {
             Debug.Log("⏰ 时间进度条归零，触发游戏结束！");
+            Debug.Log($"GameManager.Instance: {(GameManager.Instance != null ? "存在" : "为空")}");
+            Debug.Log($"UIManager.Instance: {(UIManager.Instance != null ? "存在" : "为空")}");
+            
+            // 先尝试通过GameManager触发游戏结束
             if (GameManager.Instance != null)
             {
+                Debug.Log("✅ 调用 GameManager.Instance.GameOver()");
                 GameManager.Instance.GameOver("时间耗尽！");
             }
             else
             {
-                Debug.LogWarning("⚠️ GameManager.Instance为空，无法触发游戏结束！");
+                Debug.LogWarning("⚠️ GameManager.Instance为空，尝试直接调用UIManager显示失败界面");
+                // 如果GameManager不存在，直接调用UIManager显示失败界面
+                if (UIManager.Instance != null)
+                {
+                    Debug.Log("✅ 直接调用 UIManager.Instance.ShowDefeat()");
+                    UIManager.Instance.ShowDefeat();
+                }
+                else
+                {
+                    Debug.LogError("❌ UIManager.Instance也为空，无法显示失败界面！");
+                }
             }
         }
     }

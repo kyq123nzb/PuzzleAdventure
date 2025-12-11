@@ -66,8 +66,13 @@ public class PuzzleItem : Interactable
     
     void PlayCollectEffects()
     {
-        // 播放音效
-        if (collectSound != null)
+        // 优先使用AudioManager播放音效
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayPuzzleCollectSound();
+        }
+        // 如果没有AudioManager，使用本地音效
+        else if (collectSound != null)
         {
             AudioSource.PlayClipAtPoint(collectSound, transform.position);
         }

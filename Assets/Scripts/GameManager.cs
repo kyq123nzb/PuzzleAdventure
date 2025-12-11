@@ -362,7 +362,7 @@ public class GameManager : MonoBehaviour
                 puzzleCollectionStatus[puzzleId] = true;
                 collectedPuzzles++;
                 
-                Debug.Log($"成功收集拼图 {puzzleId}！当前进度：{collectedPuzzles}/{totalPuzzles}");
+                Debug.Log($"✅ 成功收集拼图 {puzzleId}！当前进度：{collectedPuzzles}/{totalPuzzles}");
                 
                 // 触发事件（供其他系统订阅）
                 OnPuzzleCollected?.Invoke(puzzleId);
@@ -371,6 +371,7 @@ public class GameManager : MonoBehaviour
                 UpdateProgressUI();
                 
                 // 检查胜利条件（可能会触发Victory或显示庆祝界面）
+                Debug.Log($"🔍 收集拼图后，准备检查胜利条件...");
                 CheckVictoryCondition();
             }
             else
@@ -400,6 +401,12 @@ public class GameManager : MonoBehaviour
         
         currentRuneInput += runeId;
         Debug.Log($"符文输入: {currentRuneInput}");
+        
+        // 播放激活符文音效
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayRuneActivateSound();
+        }
         
         int index = currentRuneInput.Length - 1;
         if (index < runeSequenceCheck.Length)
@@ -470,6 +477,12 @@ public class GameManager : MonoBehaviour
         OnPlayerDetected?.Invoke(true);
         OnPlayerLivesChanged?.Invoke(playerLives);
         
+        // 播放警报音效
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayAlarmSound();
+        }
+        
         if (playerLives <= 0)
         {
             GameOver("被守卫发现次数过多！");
@@ -515,11 +528,13 @@ public class GameManager : MonoBehaviour
         Debug.Log($"当前收集数量: {collectedPuzzles}, 总数量: {totalPuzzles}");
         Debug.Log($"条件检查: collectedPuzzles({collectedPuzzles}) >= totalPuzzles({totalPuzzles}) = {collectedPuzzles >= totalPuzzles}");
         Debug.Log($"Boss状态: {isBossDefeated}");
+        Debug.Log($"当前游戏状态: {currentState}");
         
         // 收集完所有拼图后直接显示胜利面板
         if (collectedPuzzles >= totalPuzzles)
         {
             Debug.Log($"🎉 所有拼图已收集（{collectedPuzzles}/{totalPuzzles}），触发胜利！");
+            Debug.Log($"准备调用 Victory() 方法...");
             Victory();
         }
         else if (isBossDefeated)
@@ -641,8 +656,20 @@ public class GameManager : MonoBehaviour
     
     void Victory()
     {
+        Debug.Log($"🎉 Victory() 被调用！当前收集: {collectedPuzzles}/{totalPuzzles}");
         SetGameState(GameState.Victory);
-        Debug.Log($"游戏胜利！用时: {FormatTime(gameTime)}");
+        Debug.Log($"✅ 游戏胜利！用时: {FormatTime(gameTime)}");
+        
+        // 确保UIManager显示胜利面板（双重保障）
+        if (UIManager.Instance != null)
+        {
+            Debug.Log("✅ Victory: 再次确认调用 UIManager.ShowVictory()");
+            UIManager.Instance.ShowVictory();
+        }
+        else
+        {
+            Debug.LogError("❌ Victory: UIManager.Instance为空！");
+        }
     }
     
     public void GameOver(string reason)

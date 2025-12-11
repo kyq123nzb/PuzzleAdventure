@@ -243,9 +243,21 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
             GameObject audioManagerObj = new GameObject("AudioManager");
             AudioManager audioManager = audioManagerObj.AddComponent<AudioManager>();
             
-            // 注意：bgmClip需要在Unity编辑器的Inspector中手动设置
+            // 尝试自动加载背景音乐
+            #if UNITY_EDITOR
+            AudioClip bgmClip = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/bgm.wav");
+            if (bgmClip != null)
+            {
+                audioManager.bgmClip = bgmClip;
+                Debug.Log("✅ AudioManager已自动创建，并自动加载了背景音乐 bgm.wav");
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ AudioManager已自动创建，但无法自动加载bgm.wav，请在Inspector中手动设置");
+            }
+            #else
             Debug.Log("✅ AudioManager已自动创建");
-            Debug.Log("提示：请在Unity编辑器的Inspector中设置AudioManager的bgmClip（Assets/Audio/bgm.wav）");
+            #endif
         }
         
         // 更新声音按钮状态
@@ -371,6 +383,12 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
             int total = GameManager.Instance.TotalPuzzles;
             UpdatePuzzleProgress(collected, total);
             Debug.Log($"UIManager: 拼图 {puzzleId} 被收集，更新进度: {collected}/{total}");
+        }
+        
+        // 播放收集拼图音效
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayPuzzleCollectSound();
         }
     }
     
@@ -1334,16 +1352,28 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
             
             // 统一胜利界面按钮样式与主菜单按钮一致（内部会调用SetupVictoryText）
             SyncVictoryButtonStyles();
+            
+            Debug.Log($"✅ UIManager: 胜利面板显示完成！Panel Active: {victoryPanel.activeSelf}, In Hierarchy: {victoryPanel.activeInHierarchy}");
         }
         else
         {
             Debug.LogError("❌ UIManager: 无法找到VictoryPanel！请检查场景中是否有名为'VictoryPanel'的GameObject！");
+            Debug.LogError("❌ 尝试查找的名称: 'VictoryPanel', 'Victory Panel'");
+            
+            // 列出所有Canvas和子对象，帮助调试
+            Canvas[] allCanvases = FindObjectsOfType<Canvas>();
+            Debug.LogError($"场景中找到 {allCanvases.Length} 个Canvas对象");
+            foreach (Canvas canvas in allCanvases)
+            {
+                Debug.LogError($"  Canvas: {canvas.name}, 子对象数量: {canvas.transform.childCount}");
+            }
         }
     }
     
     public void ShowDefeat()
     {
         Debug.Log("💀 UIManager.ShowDefeat() 被调用！");
+        Debug.Log($"当前 defeatPanel 引用: {(defeatPanel != null ? defeatPanel.name : "null")}");
         
         isGameStarted = false;
         Time.timeScale = 0f;
@@ -1862,14 +1892,27 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
         }
     }
     
-    // 切换声音播放/暂停
+    // 切换声音播放/暂停（停止所有音乐，再点击时恢复）
     public void ToggleSound()
     {
         if (AudioManager.Instance != null)
         {
-            AudioManager.Instance.ToggleBGM();
+            // 检查当前BGM是否被停止
+            bool isCurrentlyStopped = AudioManager.Instance.IsBGMStopped() || !AudioManager.Instance.IsPlaying();
+            
+            if (isCurrentlyStopped)
+            {
+                // 恢复所有音乐
+                AudioManager.Instance.ResumeAllAudio();
+                Debug.Log("✅ 所有音乐已恢复播放");
+            }
+            else
+            {
+                // 停止所有音乐
+                AudioManager.Instance.StopAllAudio();
+                Debug.Log("🔇 所有音乐已停止");
+            }
             UpdateSoundButtonText();
-            Debug.Log($"声音状态: {(AudioManager.Instance.IsPlaying() ? "播放中" : "已暂停")}");
         }
         else
         {
