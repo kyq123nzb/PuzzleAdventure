@@ -1887,7 +1887,7 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
             #if UNITY_EDITOR
                 UnityEditor.EditorApplication.isPlaying = false;
             #else
-                Application.Quit();
+                UnityEngine.Application.Quit();
             #endif
         }
     }
