@@ -31,6 +31,7 @@ public class PlayerController : MonoBehaviour
     private Vector3 velocity;
     private float xRotation = 0f;
     private bool isRotatingView = false;
+    private AudioSource playerAudioSource; // 角色身上的AudioSource，用于播放3D音效
     
     void Start()
     {
@@ -56,6 +57,27 @@ public class PlayerController : MonoBehaviour
             // 禁用脚本，避免继续出错
             enabled = false;
             return;
+        }
+        
+        // 确保摄像机上没有AudioListener（应该只有一个）
+        AudioListener listener = playerCamera.GetComponent<AudioListener>();
+        if (listener == null)
+        {
+            playerCamera.gameObject.AddComponent<AudioListener>();
+            Debug.Log("已为摄像机添加AudioListener");
+        }
+        
+        // 确保角色身上有AudioSource（用于播放3D音效）
+        playerAudioSource = GetComponent<AudioSource>();
+        if (playerAudioSource == null)
+        {
+            playerAudioSource = gameObject.AddComponent<AudioSource>();
+            playerAudioSource.playOnAwake = false;
+            playerAudioSource.spatialBlend = 1f; // 设置为3D音效
+            playerAudioSource.rolloffMode = AudioRolloffMode.Logarithmic;
+            playerAudioSource.minDistance = 1f;
+            playerAudioSource.maxDistance = 50f;
+            Debug.Log("已为角色添加AudioSource（用于3D音效）");
         }
         
         // 初始时不锁定鼠标
@@ -178,6 +200,25 @@ public class PlayerController : MonoBehaviour
             
             Debug.Log("已创建新的摄像机");
         }
+        
+        // 确保角色身上有AudioSource
+        if (playerAudioSource == null)
+        {
+            playerAudioSource = GetComponent<AudioSource>();
+            if (playerAudioSource == null)
+            {
+                playerAudioSource = gameObject.AddComponent<AudioSource>();
+                playerAudioSource.playOnAwake = false;
+                playerAudioSource.spatialBlend = 1f; // 3D音效
+                Debug.Log("已为角色添加AudioSource");
+            }
+        }
+    }
+    
+    // 获取角色的AudioSource（供其他脚本使用）
+    public AudioSource GetPlayerAudioSource()
+    {
+        return playerAudioSource;
     }
 
     // ==========推箱子核心逻辑 ==========

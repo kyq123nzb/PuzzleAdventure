@@ -43,9 +43,11 @@ public class UIManager : MonoBehaviour
     
     [Header("HUD常驻暂停按钮（可选）")]
     [Tooltip("游戏画面右上角等位置一直显示的暂停按钮")]
-    public GameObject hudPauseButton;   // 常驻“暂停”按钮
+    public GameObject hudPauseButton;   // 常驻"暂停"按钮
     [Tooltip("游戏画面右上角等位置一直显示的继续按钮")]
-    public GameObject hudResumeButton;  // 常驻“继续”按钮
+    public GameObject hudResumeButton;  // 常驻"继续"按钮
+    [Tooltip("游戏画面右上角等位置一直显示的退出按钮（与继续按钮同时出现）")]
+    public GameObject hudQuitButton;  // 常驻"退出"按钮
     
     [Header("胜利界面UI")]
     public GameObject victoryPanel;
@@ -206,6 +208,12 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
             hudResumeButton.SetActive(true);
             Button resumeBtn = hudResumeButton.GetComponent<Button>();
             if (resumeBtn != null) resumeBtn.interactable = false;
+        }
+        if (hudQuitButton != null)
+        {
+            hudQuitButton.SetActive(true);
+            Button quitBtn = hudQuitButton.GetComponent<Button>();
+            if (quitBtn != null) quitBtn.interactable = true;
         }
         
         // 显示进度文本
@@ -462,6 +470,26 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
                     resumeBtn.interactable = false;
                 }
             }
+            
+            // 确保quit按钮也显示（可交互）
+            if (hudQuitButton != null && !hudQuitButton.activeInHierarchy)
+            {
+                Transform parent = hudQuitButton.transform.parent;
+                while (parent != null)
+                {
+                    if (!parent.gameObject.activeSelf)
+                    {
+                        parent.gameObject.SetActive(true);
+                    }
+                    parent = parent.parent;
+                }
+                hudQuitButton.SetActive(true);
+                Button quitBtn = hudQuitButton.GetComponent<Button>();
+                if (quitBtn != null)
+                {
+                    quitBtn.interactable = true;
+                }
+            }
         }
     }
     
@@ -481,6 +509,7 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
         if (puzzleProgressText != null) puzzleProgressText.SetActive(false);
         if (hudPauseButton != null) hudPauseButton.SetActive(false);
         if (hudResumeButton != null) hudResumeButton.SetActive(false);
+        if (hudQuitButton != null) hudQuitButton.SetActive(false);
 
         // ++++++++++ [修改 5/5] 初始隐藏爱心容器 ++++++++++
         if (livesContainer != null) livesContainer.SetActive(false);
@@ -683,6 +712,16 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
             }
         }
         
+        // 查找HUD退出按钮
+        if (hudQuitButton == null)
+        {
+            hudQuitButton = GameObject.Find("HUD QuitButton");
+            if (hudQuitButton == null)
+            {
+                hudQuitButton = GameObject.Find("QuitButton");
+            }
+        }
+        
         if (hudPauseButton != null)
         {
             SetupButton(hudPauseButton, PauseGame, "HUD PauseButton");
@@ -693,6 +732,12 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
         {
             SetupButton(hudResumeButton, ResumeGame, "HUD ResumeButton");
             Debug.Log("✅ UIManager: HUD ResumeButton已连接");
+        }
+        
+        if (hudQuitButton != null)
+        {
+            SetupButton(hudQuitButton, QuitGame, "HUD QuitButton");
+            Debug.Log("✅ UIManager: HUD QuitButton已连接");
         }
         
         // 胜利界面按钮
@@ -753,6 +798,7 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
         if (puzzleProgressText != null) puzzleProgressText.SetActive(false);
         if (hudPauseButton != null) hudPauseButton.SetActive(false);
         if (hudResumeButton != null) hudResumeButton.SetActive(false);
+        if (hudQuitButton != null) hudQuitButton.SetActive(false);
     }
     
     // 测试方法：验证按钮点击是否工作
@@ -977,6 +1023,75 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
             }
         }
         
+        // 查找HUD退出按钮（如果还没找到）
+        if (hudQuitButton == null)
+        {
+            Debug.LogWarning("⚠️ UIManager: hudQuitButton字段为空，尝试自动查找...");
+            
+            // 如果之前没找到GameHUDCanvas，再次尝试查找
+            if (gameHUDCanvas == null)
+            {
+                gameHUDCanvas = GameObject.Find("GameHUDCanvas");
+                if (gameHUDCanvas == null)
+                {
+                    // 尝试通过Canvas组件查找
+                    Canvas[] canvases = FindObjectsOfType<Canvas>(true);
+                    foreach (Canvas canvas in canvases)
+                    {
+                        if (canvas.name == "GameHUDCanvas")
+                        {
+                            gameHUDCanvas = canvas.gameObject;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (gameHUDCanvas != null)
+            {
+                // 确保GameHUDCanvas已激活
+                if (!gameHUDCanvas.activeSelf)
+                {
+                    gameHUDCanvas.SetActive(true);
+                }
+                
+                // 在GameHUDCanvas下查找QuitButton
+                Transform quitBtn = gameHUDCanvas.transform.Find("HUD QuitButton");
+                if (quitBtn == null)
+                {
+                    quitBtn = gameHUDCanvas.transform.Find("QuitButton");
+                }
+                if (quitBtn == null)
+                {
+                    // 递归查找所有子对象（包括非激活的）
+                    quitBtn = FindChildRecursive(gameHUDCanvas.transform, "HUD QuitButton");
+                    if (quitBtn == null)
+                    {
+                        quitBtn = FindChildRecursive(gameHUDCanvas.transform, "QuitButton");
+                    }
+                }
+                if (quitBtn != null)
+                {
+                    hudQuitButton = quitBtn.gameObject;
+                    Debug.Log($"✅ UIManager: 在GameHUDCanvas下找到hudQuitButton: {hudQuitButton.name}");
+                }
+            }
+            
+            // 如果还没找到，尝试全局查找
+            if (hudQuitButton == null)
+            {
+                hudQuitButton = GameObject.Find("HUD QuitButton");
+                if (hudQuitButton == null)
+                {
+                    hudQuitButton = GameObject.Find("QuitButton");
+                }
+                if (hudQuitButton != null)
+                {
+                    Debug.Log($"✅ UIManager: 全局找到hudQuitButton: {hudQuitButton.name}");
+                }
+            }
+        }
+        
         // 显示HUD上的暂停和继续按钮（游戏过程中都需要，根据状态切换可用性）
         // 先显示pause按钮，确保它一直存在
         if (hudPauseButton != null)
@@ -1105,6 +1220,27 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
             Debug.LogWarning("⚠️ UIManager: hudResumeButton为空！请检查UIManager的Inspector设置！");
         }
         
+        // 显示quit按钮（与continue按钮同时出现）
+        if (hudQuitButton != null)
+        {
+            // 激活所有父对象（包括Canvas等）
+            Transform parent = hudQuitButton.transform.parent;
+            while (parent != null)
+            {
+                parent.gameObject.SetActive(true);
+                parent = parent.parent;
+            }
+            // 然后激活按钮本身
+            hudQuitButton.SetActive(true);
+            // 游戏未暂停时，退出按钮可交互
+            Button quitBtn = hudQuitButton.GetComponent<Button>();
+            if (quitBtn != null)
+            {
+                quitBtn.interactable = true;
+            }
+            Debug.Log($"✅ UIManager: hudQuitButton已显示");
+        }
+        
         if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
         if (victoryPanel != null) victoryPanel.SetActive(false);
         
@@ -1202,6 +1338,15 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
                 resumeBtn.interactable = true;
             }
         }
+        if (hudQuitButton != null)
+        {
+            hudQuitButton.SetActive(true);
+            Button quitBtn = hudQuitButton.GetComponent<Button>();
+            if (quitBtn != null)
+            {
+                quitBtn.interactable = true;
+            }
+        }
         
         // 调用GameManager的PauseGame（如果存在）
         if (GameManager.Instance != null)
@@ -1245,6 +1390,15 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
             if (resumeBtn != null)
             {
                 resumeBtn.interactable = false;
+            }
+        }
+        if (hudQuitButton != null)
+        {
+            hudQuitButton.SetActive(true);
+            Button quitBtn = hudQuitButton.GetComponent<Button>();
+            if (quitBtn != null)
+            {
+                quitBtn.interactable = true; // 退出按钮始终可交互
             }
         }
         
@@ -1895,23 +2049,29 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
     // 切换声音播放/暂停（停止所有音乐，再点击时恢复）
     public void ToggleSound()
     {
+        Debug.Log("🔊 ToggleSound() 被调用");
+        
         if (AudioManager.Instance != null)
         {
             // 检查当前BGM是否被停止
             bool isCurrentlyStopped = AudioManager.Instance.IsBGMStopped() || !AudioManager.Instance.IsPlaying();
             
+            Debug.Log($"当前BGM状态 - IsBGMStopped: {AudioManager.Instance.IsBGMStopped()}, IsPlaying: {AudioManager.Instance.IsPlaying()}, isCurrentlyStopped: {isCurrentlyStopped}");
+            
             if (isCurrentlyStopped)
             {
                 // 恢复所有音乐
+                Debug.Log("▶️ 恢复所有音乐");
                 AudioManager.Instance.ResumeAllAudio();
-                Debug.Log("✅ 所有音乐已恢复播放");
             }
             else
             {
                 // 停止所有音乐
+                Debug.Log("🔇 停止所有音乐");
                 AudioManager.Instance.StopAllAudio();
-                Debug.Log("🔇 所有音乐已停止");
             }
+            
+            Debug.Log($"操作后BGM状态 - IsBGMStopped: {AudioManager.Instance.IsBGMStopped()}, IsPlaying: {AudioManager.Instance.IsPlaying()}");
             UpdateSoundButtonText();
         }
         else
@@ -1926,22 +2086,7 @@ public GameObject defeatRestartButton; // 新增：重新开始按钮
         if (soundButton == null) return;
         
         // 按钮文本保持为 "Music"，不随播放状态改变
-        string buttonText = "Music";
-        
-        // 尝试更新按钮文本（支持Text和TextMeshPro）
-        TMPro.TextMeshProUGUI tmpText = soundButton.GetComponentInChildren<TMPro.TextMeshProUGUI>();
-        if (tmpText != null)
-        {
-            tmpText.text = buttonText;
-        }
-        else
-        {
-            Text textComponent = soundButton.GetComponentInChildren<Text>();
-            if (textComponent != null)
-            {
-                textComponent.text = buttonText;
-            }
-        }
+        // 不更新文本内容
     }
     
     public void UpdatePuzzleProgress(int collected, int total)
